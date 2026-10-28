@@ -1,0 +1,102 @@
+import { describe, expect, it } from 'vitest';
+import { ALL_KANA, groupKey, kanaInGroups } from '../src/data/kana';
+import { nextQuestion } from '../src/game/quiz';
+import { rewardFor, streakBonus, formatSushi } from '../src/game/scoring';
+import { FLAME, HANGIRI, MAKISU, NIGIRI, SHAMOJI, UCHIWA, YANAGIBA } from '../src/ui/sprites';
+
+/** Small deterministic PRNG so failures are reproducible. */
+function seeded(seed: number) {
+  return () => {
+    seed = (seed * 1664525 + 1013904223) % 2 ** 32;
+    return seed / 2 ** 32;
+  };
+}
+
+const RUNS = 500;
+
+describe('kana data', () => {
+  it('has 71 kana per script with unique ids', () => {
+    expect(ALL_KANA.filter((k) => k.script === 'hiragana')).toHaveLength(71);
+    expect(ALL_KANA.filter((k) => k.script === 'katakana')).toHaveLength(71);
+    expect(new Set(ALL_KANA.map((k) => k.id)).size).toBe(ALL_KANA.length);
+  });
+});
+
+describe('nextQuestion', () => {
+  const pools = {
+    starter: kanaInGroups([groupKey('hiragana', 'a'), groupKey('hiragana', 'ka')]),
+    waOnly: kanaInGroups([groupKey('hiragana', 'wa')]),
+    jiZu: kanaInGroups([groupKey('katakana', 'za'), groupKey('katakana', 'da')]),
+    mixed: kanaInGroups([groupKey('hiragana', 'sa'), groupKey('katakana', 'sa')]),
+  };
+
+  for (const [name, pool] of Object.entries(pools)) {
+    it(`builds valid questions from the ${name} pool`, () => {
+      const rng = seeded(42);
+      let prev: string | null = null;
+      for (let i = 0; i < RUNS; i++) {
+        const q = nextQuestion(pool, {}, prev, rng);
+        expect(q.choices).toHaveLength(4);
+        expect(new Set(q.choices.map((k) => k.id)).size).toBe(4);
+        expect(q.choices).toContain(q.target);
+        expect(pool).toContain(q.target);
+        // Unique romaji means exactly one choice can match the prompt (ぢ/じ, づ/ず).
+        expect(new Set(q.choices.map((k) => k.romaji)).size).toBe(4);
+        expect(q.choices.every((k) => k.script === q.target.script)).toBe(true);
+        expect(q.target.id).not.toBe(prev);
+        prev = q.target.id;
+      }
+    });
+  }
+
+  it('asks often-missed kana more often', () => {
+    const pool = pools.starter;
+    const missed = pool[0]!;
+    const stats = { [missed.id]: { right: 0, wrong: 10, lastSeen: Date.now() } };
+    for (const k of pool.slice(1)) stats[k.id] = { right: 10, wrong: 0, lastSeen: Date.now() };
+    const rng = seeded(7);
+    let hits = 0;
+    for (let i = 0; i < RUNS; i++) if (nextQuestion(pool, stats, null, rng).target.id === missed.id) hits++;
+    // Uniform would be 1/10 of runs.
+    expect(hits).toBeGreaterThan(RUNS / 5);
+  });
+
+  it('rejects an empty pool', () => {
+    expect(() => nextQuestion([], {}, null)).toThrow();
+  });
+});
+
+describe('scoring', () => {
+  it('adds 10% per 5-streak, capped at x2', () => {
+    expect(streakBonus(0)).toBe(1);
+    expect(streakBonus(4)).toBe(1);
+    expect(streakBonus(5)).toBeCloseTo(1.1);
+    expect(streakBonus(500)).toBe(2);
+  });
+
+  it('pays katakana more than hiragana', () => {
+    const hira = ALL_KANA.find((k) => k.id === 'hiragana:か')!;
+    const kata = ALL_KANA.find((k) => k.id === 'katakana:カ')!;
+    expect(rewardFor(hira, 1)).toBe(1);
+    expect(rewardFor(kata, 1)).toBe(1.5);
+  });
+
+  it('formats big numbers compactly', () => {
+    expect(formatSushi(999.9)).toBe('999');
+    expect(formatSushi(1234)).toBe('1.23K');
+    expect(formatSushi(2_500_000)).toBe('2.50M');
+  });
+});
+
+describe('sprites', () => {
+  it('have rectangular grids with known colors', () => {
+    for (const sprite of [NIGIRI, FLAME, SHAMOJI, YANAGIBA, MAKISU, UCHIWA, HANGIRI]) {
+      const width = sprite.grid[0]!.length;
+      expect(sprite.grid).toHaveLength(width);
+      for (const row of sprite.grid) {
+        expect(row).toHaveLength(width);
+        for (const ch of row) if (ch !== '.') expect(sprite.palette).toHaveProperty(ch);
+      }
+    }
+  });
+});
