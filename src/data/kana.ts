@@ -55,6 +55,15 @@ export const ALL_KANA: Kana[] = build();
 
 export const groupKey = (script: Script, group: string) => `${script}:${group}`;
 
+const GROUP_KEYS = new Set(
+  (['hiragana', 'katakana'] as const).flatMap((script) => GROUPS.map((g) => groupKey(script, g.id))),
+);
+
+/** Number of distinct, real rows among `keys` (ignores junk from old saves). */
+export function countRows(keys: Iterable<string>): number {
+  return [...new Set(keys)].filter((k) => GROUP_KEYS.has(k)).length;
+}
+
 export function kanaInGroups(groupKeys: Iterable<string>): Kana[] {
   const keys = new Set(groupKeys);
   return ALL_KANA.filter((k) => keys.has(groupKey(k.script, k.group)));

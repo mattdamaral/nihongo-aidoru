@@ -1,6 +1,7 @@
 import { exportCode, importCode, SaveCodeError } from '../game/savecode';
 import type { GameState } from '../game/state';
 import { formatSushi } from '../game/scoring';
+import type { Sound } from './sound';
 
 export interface MenuView {
   open(): void;
@@ -8,14 +9,27 @@ export interface MenuView {
   readonly isOpen: boolean;
 }
 
-/** Save / Load modal: shows a copyable save code and loads pasted ones. */
-export function createMenu(root: HTMLElement, state: GameState, onLoad: (incoming: GameState) => void): MenuView {
+/** Menu modal: sound settings, a copyable save code, and loading pasted codes. */
+export function createMenu(
+  root: HTMLElement,
+  state: GameState,
+  sound: Sound,
+  onLoad: (incoming: GameState) => void,
+): MenuView {
   root.innerHTML = `
     <div class="sheet menu" role="dialog" aria-modal="true" aria-labelledby="menu-title">
       <header class="sheet-head">
-        <h2 id="menu-title">Save</h2>
+        <h2 id="menu-title">Menu</h2>
         <button type="button" class="btn sheet-done">Done</button>
       </header>
+      <section class="menu-section">
+        <h3>Sound</h3>
+        <div class="menu-row sound-row">
+          <label class="toggle"><input type="checkbox" class="sound-on" /> Sound effects</label>
+          <input type="range" class="sound-volume" min="0" max="100" step="5" aria-label="Volume" />
+        </div>
+        <p class="sheet-hint">Press M to mute or unmute.</p>
+      </section>
       <section class="menu-section">
         <h3>Your save code</h3>
         <p class="sheet-hint">Paste it somewhere safe, or into “Load” on another device. Your game also saves itself automatically.</p>
@@ -49,8 +63,25 @@ export function createMenu(root: HTMLElement, state: GameState, onLoad: (incomin
   const copyStatus = $('.copy-status');
   const loadStatus = $('.load-status');
   const confirmBox = $('.menu-confirm');
+  const soundOn = $<HTMLInputElement>('.sound-on');
+  const volume = $<HTMLInputElement>('.sound-volume');
   let pending: GameState | null = null;
   let isOpen = false;
+
+  const syncSound = () => {
+    soundOn.checked = !sound.settings.muted;
+    volume.value = String(Math.round(sound.settings.volume * 100));
+    volume.disabled = sound.settings.muted;
+  };
+  soundOn.addEventListener('change', () => {
+    sound.set({ muted: !soundOn.checked });
+    syncSound();
+    sound.correct();
+  });
+  volume.addEventListener('change', () => {
+    sound.set({ volume: Number(volume.value) / 100 });
+    sound.correct();
+  });
 
   const setStatus = (el: HTMLElement, text: string, bad = false) => {
     el.textContent = text;
@@ -114,6 +145,7 @@ export function createMenu(root: HTMLElement, state: GameState, onLoad: (incomin
 
   return {
     open() {
+      syncSound();
       resetLoad();
       setStatus(copyStatus, '');
       void refreshCode();

@@ -1,16 +1,32 @@
-import { DECKS } from '../data/decks';
-import { ALL_KANA, GROUPS, groupKey } from '../data/kana';
+import { deckFor } from '../data/decks';
+import { ALL_KANA, countRows, GROUPS, groupKey, type Script } from '../data/kana';
+import { LESSONS } from '../data/lessons';
+import { rowBonus } from '../game/scoring';
 import type { GameState } from '../game/state';
 
 export interface LessonsView {
+  /** Refreshes mastery bars and counts without rebuilding the panel. */
+  update(): void;
+  /** Rebuilds the panel, e.g. after loading a save replaced the enabled rows. */
+  rebuild(): void;
+  /** Turns on one row, e.g. from Learn mode's "Practice this row". */
+  enableRow(key: string): void;
   open(): void;
   close(): void;
+  toggle(): void;
   readonly isOpen: boolean;
+}
+
+export interface LessonsActions {
+  /** Fires after the enabled rows change; the panel edits `state` directly. */
+  onChange(): void;
+  onLearn(script: Script): void;
 }
 
 const BASIC = ['a', 'ka', 'sa', 'ta', 'na', 'ha', 'ma', 'ya', 'ra', 'wa'];
 /** Correct answers needed per kana to fill its share of the mastery bar. */
-const MASTERY_TARGET = 5;
+export const MASTERY_TARGET = 5;
+const HINT = 'Pick the rows to practice. More rows and harder scripts pay more sushi.';
 
 function mastery(state: GameState, key: string): number {
   const kana = ALL_KANA.filter((k) => groupKey(k.script, k.group) === key);
@@ -18,70 +34,119 @@ function mastery(state: GameState, key: string): number {
   return score / (kana.length * MASTERY_TARGET);
 }
 
+const rowsOn = (state: GameState, script: Script) =>
+  state.enabledGroups.filter((k) => k.startsWith(`${script}:`)).length;
+
 /**
- * Bottom sheet (phone) / modal (desktop) for picking which kana groups are quizzed.
- * `onChange` fires after the enabled groups change; the sheet edits `state` directly.
+ * Lessons panel: a left column on wide screens, a drawer from the left otherwise.
+ * Lists every lesson; the selected kana lesson expands to its row chips.
  */
-export function createLessons(root: HTMLElement, state: GameState, onChange: () => void, onClose: () => void): LessonsView {
+export function createLessons(
+  root: HTMLElement,
+  backdrop: HTMLElement,
+  state: GameState,
+  actions: LessonsActions,
+): LessonsView {
   root.innerHTML = `
-    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="lessons-title">
-      <header class="sheet-head">
-        <h2 id="lessons-title">Lessons</h2>
-        <button type="button" class="btn sheet-done">Done</button>
-      </header>
-      <p class="sheet-hint">Pick the kana rows to practice. Harder decks pay more sushi.</p>
-      <div class="sheet-body"></div>
-    </div>
+    <header class="panel-head">
+      <div>
+        <h2>Lessons</h2>
+        <p class="lessons-bonus"></p>
+      </div>
+      <button type="button" class="btn btn-small lessons-close" aria-label="Close lessons">Close</button>
+    </header>
+    <p class="lessons-hint" aria-live="polite"></p>
+    <div class="lesson-list"></div>
   `;
-  const body = root.querySelector<HTMLElement>('.sheet-body')!;
+  const bonusEl = root.querySelector<HTMLElement>('.lessons-bonus')!;
+  const hintEl = root.querySelector<HTMLElement>('.lessons-hint')!;
+  const list = root.querySelector<HTMLElement>('.lesson-list')!;
+  const firstScript = state.enabledGroups[0]?.split(':')[0];
+  let selected: Script = firstScript === 'katakana' ? 'katakana' : 'hiragana';
   let isOpen = false;
 
-  function chip(script: (typeof DECKS)[number]['id'], groupId: string): string {
+  function chip(script: Script, groupId: string): string {
     const g = GROUPS.find((x) => x.id === groupId)!;
     const key = groupKey(script, groupId);
     const kana = g.rows.map(([, h, k]) => (script === 'hiragana' ? h : k)).join('');
-    const pct = Math.round(mastery(state, key) * 100);
     return `
-      <label class="chip" title="Mastery ${pct}%">
+      <label class="chip" data-key="${key}">
         <input type="checkbox" value="${key}" ${state.enabledGroups.includes(key) ? 'checked' : ''} />
         <span class="chip-kana" lang="ja">${kana}</span>
         <span class="chip-label">${g.label}</span>
-        <span class="chip-bar"><span style="width:${pct}%"></span></span>
+        <span class="chip-bar"><span></span></span>
       </label>`;
   }
 
-  function render(): void {
-    body.innerHTML = DECKS.map(
-      (deck) => `
-      <section class="deck" data-deck="${deck.id}">
-        <div class="deck-head">
-          <h3>${deck.name} <span lang="ja">${deck.jpName}</span></h3>
-          <span class="deck-mult">×${deck.multiplier} sushi</span>
-          <span class="deck-actions">
-            <button type="button" class="btn btn-small" data-all="${deck.id}">All</button>
-            <button type="button" class="btn btn-small" data-none="${deck.id}">None</button>
-          </span>
+  function detail(script: Script): string {
+    const deck = deckFor(script);
+    return `
+      <div class="lesson-detail" data-deck="${script}">
+        <div class="lesson-actions">
+          <button type="button" class="btn learn-btn" data-learn="${script}">Learn</button>
+          <button type="button" class="btn btn-small" data-all="${script}">All</button>
+          <button type="button" class="btn btn-small" data-none="${script}">None</button>
         </div>
-        <div class="chips">${deck.groups.filter((g) => BASIC.includes(g)).map((g) => chip(deck.id, g)).join('')}</div>
+        <div class="chips">${deck.groups.filter((g) => BASIC.includes(g)).map((g) => chip(script, g)).join('')}</div>
         <h4 class="chips-sub">Dakuten <span lang="ja">゛゜</span></h4>
-        <div class="chips">${deck.groups.filter((g) => !BASIC.includes(g)).map((g) => chip(deck.id, g)).join('')}</div>
-      </section>`,
-    ).join('');
+        <div class="chips">${deck.groups.filter((g) => !BASIC.includes(g)).map((g) => chip(script, g)).join('')}</div>
+      </div>`;
+  }
+
+  function render(): void {
+    list.innerHTML = LESSONS.map((lesson) => {
+      if (lesson.status === 'soon' || !lesson.deck) {
+        return `
+          <button type="button" class="lesson is-soon" disabled>
+            <span class="lesson-jp" lang="ja">${lesson.jpName}</span>
+            <span class="lesson-name">${lesson.name}</span>
+            <span class="lesson-meta">Coming soon</span>
+          </button>`;
+      }
+      const open = lesson.deck === selected;
+      return `
+        <button type="button" class="lesson" data-lesson="${lesson.deck}" aria-expanded="${open}">
+          <span class="lesson-jp" lang="ja">${lesson.jpName}</span>
+          <span class="lesson-name">${lesson.name}</span>
+          <span class="lesson-meta"></span>
+        </button>
+        ${open ? detail(lesson.deck) : ''}`;
+    }).join('');
+    update();
+  }
+
+  function update(): void {
+    const rows = countRows(state.enabledGroups);
+    bonusEl.textContent = `Row bonus ×${Number(rowBonus(rows).toFixed(2))} · ${rows} ${rows === 1 ? 'row' : 'rows'}`;
+    for (const el of list.querySelectorAll<HTMLElement>('[data-lesson]')) {
+      const script = el.dataset.lesson as Script;
+      const on = rowsOn(state, script);
+      el.querySelector('.lesson-meta')!.textContent = `×${deckFor(script).multiplier} · ${on ? `${on} on` : 'off'}`;
+      el.classList.toggle('is-on', on > 0);
+    }
+    for (const el of list.querySelectorAll<HTMLElement>('.chip')) {
+      const pct = Math.round(mastery(state, el.dataset.key!) * 100);
+      el.title = `Mastery ${pct}%`;
+      el.querySelector<HTMLElement>('.chip-bar span')!.style.width = `${pct}%`;
+    }
   }
 
   function setGroups(next: string[]): void {
-    // At least one group must stay on, otherwise there is nothing to quiz.
+    // At least one row must stay on, otherwise there is nothing to quiz.
     if (next.length === 0) {
-      root.querySelector('.sheet-hint')!.textContent = 'Keep at least one row selected.';
+      hintEl.textContent = 'Keep at least one row selected.';
+      hintEl.classList.add('is-bad');
       render();
       return;
     }
+    hintEl.textContent = HINT;
+    hintEl.classList.remove('is-bad');
     state.enabledGroups = next;
-    onChange();
+    actions.onChange();
     render();
   }
 
-  body.addEventListener('change', (e) => {
+  list.addEventListener('change', (e) => {
     const input = e.target as HTMLInputElement;
     const set = new Set(state.enabledGroups);
     if (input.checked) set.add(input.value);
@@ -89,36 +154,45 @@ export function createLessons(root: HTMLElement, state: GameState, onChange: () 
     setGroups([...set]);
   });
 
-  body.addEventListener('click', (e) => {
+  list.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
     if (!btn) return;
-    const deck = DECKS.find((d) => d.id === (btn.dataset.all ?? btn.dataset.none));
-    if (!deck) return;
-    const keys = deck.groups.map((g) => groupKey(deck.id, g));
-    const others = state.enabledGroups.filter((k) => !keys.includes(k));
-    setGroups(btn.dataset.all ? [...others, ...keys] : others);
+    if (btn.dataset.lesson) {
+      selected = btn.dataset.lesson as Script;
+      render();
+    } else if (btn.dataset.learn) {
+      actions.onLearn(btn.dataset.learn as Script);
+    } else {
+      const script = (btn.dataset.all ?? btn.dataset.none) as Script | undefined;
+      if (!script) return;
+      const keys = deckFor(script).groups.map((g) => groupKey(script, g));
+      const others = state.enabledGroups.filter((k) => !keys.includes(k));
+      setGroups(btn.dataset.all ? [...others, ...keys] : others);
+    }
   });
 
-  const close = () => {
-    if (!isOpen) return;
-    isOpen = false;
-    root.classList.remove('is-open');
-    onClose();
+  const setOpen = (open: boolean) => {
+    isOpen = open;
+    root.classList.toggle('is-open', open);
+    backdrop.classList.toggle('is-open', open);
   };
-  root.querySelector('.sheet-done')!.addEventListener('click', close);
-  root.addEventListener('click', (e) => {
-    if (e.target === root) close();
-  });
+  root.querySelector('.lessons-close')!.addEventListener('click', () => setOpen(false));
+  backdrop.addEventListener('click', () => setOpen(false));
+
+  hintEl.textContent = HINT;
+  render();
 
   return {
-    open() {
-      root.querySelector('.sheet-hint')!.textContent = 'Pick the kana rows to practice. Harder decks pay more sushi.';
-      render();
-      isOpen = true;
-      root.classList.add('is-open');
-      root.querySelector<HTMLElement>('.sheet-done')!.focus();
+    update,
+    rebuild: render,
+    enableRow(key) {
+      if (state.enabledGroups.includes(key)) return;
+      selected = key.split(':')[0] as Script;
+      setGroups([...state.enabledGroups, key]);
     },
-    close,
+    open: () => setOpen(true),
+    close: () => setOpen(false),
+    toggle: () => setOpen(!isOpen),
     get isOpen() {
       return isOpen;
     },

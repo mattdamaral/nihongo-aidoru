@@ -37,9 +37,9 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
       <span class="streak-bonus">×1.0</span>
     </div>
     <nav class="topbar-actions">
-      <button type="button" class="btn btn-icon lessons-btn" title="Lessons (L)" aria-label="Lessons"><span lang="ja">あ</span></button>
+      <button type="button" class="btn btn-icon lessons-btn" title="Lessons (L)">Lessons</button>
       <button type="button" class="btn btn-icon shop-btn" title="Shop (B)" aria-label="Shop">Shop</button>
-      <button type="button" class="btn btn-icon menu-btn" title="Save / Load" aria-label="Save and load">≡</button>
+      <button type="button" class="btn btn-icon menu-btn" title="Menu: sound, save / load" aria-label="Menu">≡</button>
     </nav>
   `;
   stage.innerHTML = `

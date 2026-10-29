@@ -3,13 +3,14 @@ import type { Question } from '../game/quiz';
 import { formatReward } from '../game/scoring';
 
 export interface QuizView {
-  show(question: Question, reward: number): void;
+  /** `detail` explains the reward (shown as a tooltip). */
+  show(question: Question, reward: number, detail: string): void;
   /** Marks the chosen and the correct answers and shows a short explanation. */
   reveal(chosenId: string, reward: number | null): void;
   /** Picks the answer at `index` (0–3), as if it was clicked. */
   choose(index: number): void;
   /** Updates the "+X sushi" label, e.g. after buying a tool. */
-  updateReward(reward: number): void;
+  updateReward(reward: number, detail: string): void;
 }
 
 const KEYS = ['1', '2', '3', '4'];
@@ -33,8 +34,9 @@ export function createQuiz(root: HTMLElement, onAnswer: (kanaId: string) => void
 
   let current: Question | null = null;
   let locked = false;
-  const setWorth = (reward: number) => {
+  const setWorth = (reward: number, detail: string) => {
     worthEl.textContent = `${formatReward(reward)} sushi`;
+    worthEl.title = detail;
   };
 
   choicesEl.addEventListener('click', (e) => {
@@ -43,13 +45,13 @@ export function createQuiz(root: HTMLElement, onAnswer: (kanaId: string) => void
   });
 
   return {
-    show(question, reward) {
+    show(question, reward, detail) {
       current = question;
       locked = false;
       const deck = deckFor(question.target.script);
       scriptEl.textContent = `${deck.name} ${deck.jpName}`;
       scriptEl.dataset.script = deck.id;
-      setWorth(reward);
+      setWorth(reward, detail);
       promptEl.textContent = question.target.romaji;
       feedbackEl.textContent = '';
       feedbackEl.className = 'quiz-feedback';
@@ -84,8 +86,8 @@ export function createQuiz(root: HTMLElement, onAnswer: (kanaId: string) => void
       const btn = choicesEl.querySelectorAll<HTMLButtonElement>('.choice')[index];
       if (btn?.dataset.id && !locked) onAnswer(btn.dataset.id);
     },
-    updateReward(reward) {
-      if (!locked) setWorth(reward);
+    updateReward(reward, detail) {
+      if (!locked) setWorth(reward, detail);
     },
   };
 }

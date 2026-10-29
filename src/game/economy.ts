@@ -1,5 +1,6 @@
+import { countRows } from '../data/kana';
 import { TOOLS, type Tool } from '../data/tools';
-import { BASE_STREAK_CAP, BASE_STREAK_STEP, type RewardMods } from './scoring';
+import { BASE_STREAK_CAP, BASE_STREAK_STEP, rowBonus, type RewardMods } from './scoring';
 import type { GameState } from './state';
 
 /** Owning this many of a passive tool doubles its output (each milestone stacks). */
@@ -51,9 +52,14 @@ export function passiveRate(state: GameState): number {
   return rate;
 }
 
-/** Answer and streak modifiers from owned tools, for `rewardFor`. */
+/** Answer and streak modifiers from owned tools and selected rows, for `rewardFor`. */
 export function rewardMods(state: GameState): RewardMods {
-  const mods = { answerBonus: 0, streakStep: BASE_STREAK_STEP, streakCap: BASE_STREAK_CAP };
+  const mods = {
+    answerBonus: 0,
+    streakStep: BASE_STREAK_STEP,
+    streakCap: BASE_STREAK_CAP,
+    rowMult: rowBonus(countRows(state.enabledGroups)),
+  };
   for (const tool of TOOLS) {
     const n = owned(state, tool);
     if (tool.effect.kind === 'answer') mods.answerBonus += tool.effect.amount * n;

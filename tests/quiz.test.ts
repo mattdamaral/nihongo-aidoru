@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_KANA, groupKey, kanaInGroups } from '../src/data/kana';
 import { nextQuestion } from '../src/game/quiz';
-import { rewardFor, streakBonus, formatSushi } from '../src/game/scoring';
+import { formatSushi, NO_MODS, rewardBreakdown, rewardFor, rowBonus, streakBonus } from '../src/game/scoring';
 import { FLAME, HANGIRI, MAKISU, NIGIRI, SHAMOJI, UCHIWA, YANAGIBA } from '../src/ui/sprites';
 
 /** Small deterministic PRNG so failures are reproducible. */
@@ -72,6 +72,16 @@ describe('scoring', () => {
     expect(streakBonus(4)).toBe(1);
     expect(streakBonus(5)).toBeCloseTo(1.1);
     expect(streakBonus(500)).toBe(2);
+  });
+
+  it('adds 5% per selected row after the first', () => {
+    expect(rowBonus(0)).toBe(1);
+    expect(rowBonus(1)).toBe(1);
+    expect(rowBonus(6)).toBeCloseTo(1.25);
+    expect(rowBonus(30)).toBeCloseTo(2.45);
+    const hira = ALL_KANA.find((k) => k.id === 'hiragana:か')!;
+    expect(rewardFor(hira, 1, { ...NO_MODS, rowMult: rowBonus(6) })).toBeCloseTo(1.25);
+    expect(rewardBreakdown(hira, 1, { ...NO_MODS, rowMult: 1.25 })).toBe('1 base × 1 hiragana × 1.25 rows × 1 streak');
   });
 
   it('pays katakana more than hiragana', () => {

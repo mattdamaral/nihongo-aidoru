@@ -5,6 +5,8 @@ const BASE_REWARD = 1;
 const STREAK_STEP = 5;
 export const BASE_STREAK_STEP = 0.1;
 export const BASE_STREAK_CAP = 2;
+/** Extra multiplier per selected kana row beyond the first. */
+export const ROW_BONUS = 0.05;
 
 export interface RewardMods {
   /** Added to the base reward before multipliers. */
@@ -13,13 +15,25 @@ export interface RewardMods {
   streakStep: number;
   /** Maximum streak multiplier. */
   streakCap: number;
+  /** Multiplier for practicing many rows at once (see rowBonus). */
+  rowMult: number;
 }
 
-export const NO_MODS: RewardMods = { answerBonus: 0, streakStep: BASE_STREAK_STEP, streakCap: BASE_STREAK_CAP };
+export const NO_MODS: RewardMods = {
+  answerBonus: 0,
+  streakStep: BASE_STREAK_STEP,
+  streakCap: BASE_STREAK_CAP,
+  rowMult: 1,
+};
 
 /** +10% for every 5 correct answers in a row, capped at ×2 (tools raise both). */
 export function streakBonus(streak: number, step = BASE_STREAK_STEP, cap = BASE_STREAK_CAP): number {
   return Math.min(1 + step * Math.floor(streak / STREAK_STEP), cap);
+}
+
+/** More rows means more possible answers: +5% per row after the first. */
+export function rowBonus(rows: number): number {
+  return 1 + ROW_BONUS * Math.max(rows - 1, 0);
 }
 
 /** Sushi earned for answering `kana` correctly with `streak` already including this answer. */
@@ -27,8 +41,21 @@ export function rewardFor(kana: Kana, streak: number, mods: RewardMods = NO_MODS
   return (
     (BASE_REWARD + mods.answerBonus) *
     deckFor(kana.script).multiplier *
+    mods.rowMult *
     streakBonus(streak, mods.streakStep, mods.streakCap)
   );
+}
+
+/** Explains a reward, e.g. "2 base × 1.5 katakana × 1.25 rows × 1.1 streak". */
+export function rewardBreakdown(kana: Kana, streak: number, mods: RewardMods = NO_MODS): string {
+  const n = (v: number) => String(Number(v.toFixed(2)));
+  const deck = deckFor(kana.script);
+  return [
+    `${n(BASE_REWARD + mods.answerBonus)} base`,
+    `${n(deck.multiplier)} ${deck.name.toLowerCase()}`,
+    `${n(mods.rowMult)} rows`,
+    `${n(streakBonus(streak, mods.streakStep, mods.streakCap))} streak`,
+  ].join(' × ');
 }
 
 const UNITS = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi'];

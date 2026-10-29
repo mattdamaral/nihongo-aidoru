@@ -104,15 +104,26 @@ describe('time away', () => {
   });
 });
 
-describe('answer and streak tools', () => {
+describe('answer and streak modifiers', () => {
+  /** One row selected, so the row bonus stays ×1. */
+  const oneRow = () => ({ ...defaultState(), enabledGroups: ['hiragana:ka'] });
+
   it('knives add base sushi before multipliers', () => {
-    const state = defaultState();
+    const state = oneRow();
     state.tools = { yanagiba: 2 };
     expect(rewardFor(KA, 1, rewardMods(state))).toBe(3);
   });
 
-  it('fans grow the streak bonus and its cap', () => {
+  it('selected rows multiply the reward, ignoring unknown keys', () => {
     const state = defaultState();
+    expect(rewardMods(state).rowMult).toBeCloseTo(1.05);
+    state.enabledGroups = ['hiragana:a', 'hiragana:ka', 'katakana:sa', 'hiragana:ka', 'kanji:one'];
+    expect(rewardMods(state).rowMult).toBeCloseTo(1.1);
+    expect(rewardFor(KA, 1, rewardMods(state))).toBeCloseTo(1.1);
+  });
+
+  it('fans grow the streak bonus and its cap', () => {
+    const state = oneRow();
     expect(rewardFor(KA, 10, rewardMods(state))).toBeCloseTo(1.2);
     state.tools = { uchiwa: 1 };
     expect(rewardFor(KA, 10, rewardMods(state))).toBeCloseTo(1.4);
