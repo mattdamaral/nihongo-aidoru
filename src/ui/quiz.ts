@@ -1,15 +1,22 @@
-import type { Card } from '../data/cards';
+import { japanese, type Card } from '../data/cards';
 import { deckFor } from '../data/decks';
 import { isScript } from '../data/kana';
 import type { Question } from '../game/quiz';
 import { formatReward } from '../game/scoring';
+import type { GameState } from '../game/state';
 
 /** Extra class that shrinks long text (greetings, big numbers) so it fits. */
 export const sizeClass = (text: string) => (text.length > 9 ? ' is-longer' : text.length > 4 ? ' is-long' : '');
 
-/** "か = ka", or "よんじゅうに (yonjuuni) = 42" when the answer isn't the romaji. */
-const explain = (c: Card) =>
-  `<span lang="ja">${c.kana}</span>${c.answer === c.romaji ? '' : ` (${c.romaji})`} = ${c.answer}`;
+/**
+ * "か = ka", "よんじゅうに (yonjuuni) = 42", or with kanji on, "四十二 (よんじゅうに) = 42":
+ * the reading in brackets is whatever the shown text doesn't already say.
+ */
+function explain(c: Card, useKanji: boolean): string {
+  const shown = japanese(c, useKanji);
+  const reading = shown !== c.kana ? `<span lang="ja">${c.kana}</span>` : c.answer !== c.romaji ? c.romaji : '';
+  return `<span lang="ja">${shown}</span>${reading ? ` (${reading})` : ''} = ${c.answer}`;
+}
 
 export interface QuizView {
   /** `detail` explains the reward (shown as a tooltip). */
@@ -24,7 +31,7 @@ export interface QuizView {
 
 const KEYS = ['1', '2', '3', '4'];
 
-export function createQuiz(root: HTMLElement, onAnswer: (cardId: string) => void): QuizView {
+export function createQuiz(root: HTMLElement, state: GameState, onAnswer: (cardId: string) => void): QuizView {
   root.innerHTML = `
     <div class="quiz-head">
       <span class="quiz-script"></span>
@@ -63,7 +70,8 @@ export function createQuiz(root: HTMLElement, onAnswer: (cardId: string) => void
       scriptEl.dataset.script = deck.id;
       setWorth(reward, detail);
       const pickKana = question.direction === 'pick-kana';
-      const prompt = pickKana ? question.target.answer : question.target.kana;
+      const jp = (c: Card) => japanese(c, state.useKanji);
+      const prompt = pickKana ? question.target.answer : jp(question.target);
       labelEl.textContent = deck.labels[question.direction];
       promptEl.textContent = prompt;
       promptEl.className = `quiz-prompt${sizeClass(prompt)}`;
@@ -77,7 +85,7 @@ export function createQuiz(root: HTMLElement, onAnswer: (cardId: string) => void
           <button type="button" class="choice" data-id="${c.id}">
             <kbd>${KEYS[i]}</kbd>${
               pickKana
-                ? `<span class="choice-kana${sizeClass(c.kana)}" lang="ja">${c.kana}</span>`
+                ? `<span class="choice-kana${sizeClass(jp(c))}" lang="ja">${jp(c)}</span>`
                 : `<span class="choice-romaji${sizeClass(c.answer)}">${c.answer}</span>`
             }
           </button>`,
@@ -95,10 +103,10 @@ export function createQuiz(root: HTMLElement, onAnswer: (cardId: string) => void
         else if (btn.dataset.id === chosenId) btn.classList.add('is-wrong');
       }
       if (reward !== null) {
-        feedbackEl.innerHTML = `${explain(target)} &nbsp;${formatReward(reward)}`;
+        feedbackEl.innerHTML = `${explain(target, state.useKanji)} &nbsp;${formatReward(reward)}`;
         feedbackEl.classList.add('is-good');
       } else if (chosen) {
-        feedbackEl.innerHTML = `${explain(chosen)} · ${explain(target)}`;
+        feedbackEl.innerHTML = `${explain(chosen, state.useKanji)} · ${explain(target, state.useKanji)}`;
         feedbackEl.classList.add('is-bad');
       }
     },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_CARDS, cardsInGroups, groupKey } from '../src/data/cards';
+import { ALL_CARDS, cardsInGroups, groupKey, japanese } from '../src/data/cards';
 import { DECKS } from '../src/data/decks';
 import { GREETINGS } from '../src/data/greetings';
 import { NUMBERS } from '../src/data/numbers';
@@ -21,7 +21,19 @@ describe('cards', () => {
       expect(new Set(deck.map((c) => c.answer)).size).toBe(deck.length);
       expect(new Set(deck.map((c) => c.kana)).size).toBe(deck.length);
       for (const c of deck) expect(c.notes?.length, c.id).toBeGreaterThan(0);
+      // With kanji on, the Japanese side must still tell every card apart.
+      expect(new Set(deck.map((c) => japanese(c, true))).size).toBe(deck.length);
     }
+  });
+
+  it('show kanji only when the option is on and the card has one', () => {
+    const fortyTwo = NUMBERS.find((c) => c.id === 'numbers:42')!;
+    expect(japanese(fortyTwo, false)).toBe('よんじゅうに');
+    expect(japanese(fortyTwo, true)).toBe('四十二');
+    const tadaima = GREETINGS.find((c) => c.kana === 'ただいま')!;
+    expect(japanese(tadaima, true)).toBe('ただいま');
+    expect(GREETINGS.find((c) => c.kana === 'おねがいします')!.kanji).toBe('お願いします');
+    expect(GREETINGS.filter((c) => c.kanji)).toHaveLength(13);
   });
 });
 

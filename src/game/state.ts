@@ -1,4 +1,4 @@
-import { groupKey } from '../data/cards';
+import { ALL_CARDS, cardsInGroups, DECK_IDS, groupKey, type DeckId } from '../data/cards';
 import { TOOL_IDS } from '../data/tools';
 import { STORAGE_PREFIX } from './storage';
 
@@ -21,10 +21,14 @@ export interface GameState {
   totalEarned: number;
   streak: number;
   bestStreak: number;
-  /** Group keys like "hiragana:ka". */
+  /** The one lesson being quizzed. */
+  activeDeck: DeckId;
+  /** Group keys like "hiragana:ka", for every lesson; only the active deck's are quizzed. */
   enabledGroups: string[];
   stats: Record<string, CardStat>;
   quizMode: QuizMode;
+  /** Show the Japanese side in kanji where a card has it (numbers, some greetings). */
+  useKanji: boolean;
   /** Tool id → number owned. */
   tools: Record<string, number>;
   /** Tool id → seconds into the current production cycle. */
@@ -33,6 +37,9 @@ export interface GameState {
   lastTick: number;
   lastSaved: number;
 }
+
+/** Rows of the lesson being played; other lessons keep their picks for when you switch back. */
+export const activeGroups = (state: GameState) => state.enabledGroups.filter((k) => k.startsWith(`${state.activeDeck}:`));
 
 export const SAVE_KEY = `${STORAGE_PREFIX}:save`;
 
@@ -45,9 +52,11 @@ export function defaultState(now = Date.now()): GameState {
     totalEarned: 0,
     streak: 0,
     bestStreak: 0,
+    activeDeck: 'hiragana',
     enabledGroups: [groupKey('hiragana', 'a'), groupKey('hiragana', 'ka')],
     stats: {},
     quizMode: 'pick-kana',
+    useKanji: false,
     tools: {},
     toolProgress: {},
     lastTick: now,
@@ -86,9 +95,16 @@ export function parseState(raw: unknown): GameState | null {
       }
     }
   }
-  const groups = Array.isArray(r.enabledGroups)
-    ? r.enabledGroups.filter((g): g is string => typeof g === 'string')
-    : [];
+  const picked = Array.isArray(r.enabledGroups) ? r.enabledGroups.filter((g): g is string => typeof g === 'string') : [];
+  const groups = picked.length > 0 ? picked : fresh.enabledGroups;
+  // Saves from before one-lesson-at-a-time play the lesson of their first row.
+  const activeDeck = DECK_IDS.includes(r.activeDeck as DeckId)
+    ? (r.activeDeck as DeckId)
+    : (DECK_IDS.find((d) => groups[0]?.startsWith(`${d}:`)) ?? fresh.activeDeck);
+  // The lesson being played needs at least one real row, or there's nothing to ask.
+  const enabledGroups = cardsInGroups(groups).some((c) => c.deck === activeDeck)
+    ? groups
+    : [...groups, groupKey(activeDeck, ALL_CARDS.find((c) => c.deck === activeDeck)!.group)];
   const lastSaved = isNum(r.lastSaved) ? r.lastSaved : fresh.lastSaved;
 
   return {
@@ -97,10 +113,12 @@ export function parseState(raw: unknown): GameState | null {
     totalEarned: isNum(r.totalEarned) ? r.totalEarned : fresh.totalEarned,
     streak: isNum(r.streak) ? r.streak : 0,
     bestStreak: isNum(r.bestStreak) ? r.bestStreak : 0,
-    enabledGroups: groups.length > 0 ? groups : fresh.enabledGroups,
+    activeDeck,
+    enabledGroups,
     stats,
     // Saves from before quiz modes default to the original direction.
     quizMode: QUIZ_MODES.includes(r.quizMode as QuizMode) ? (r.quizMode as QuizMode) : fresh.quizMode,
+    useKanji: r.useKanji === true,
     // v1 saves have no tools; these default to empty.
     tools: toolRecord(r.tools, true),
     toolProgress: toolRecord(r.toolProgress, false),

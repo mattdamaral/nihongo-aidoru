@@ -1,4 +1,4 @@
-import { ALL_CARDS, groupKey, type Card, type DeckId } from '../data/cards';
+import { ALL_CARDS, groupKey, japanese, type Card, type DeckId } from '../data/cards';
 import { deckFor } from '../data/decks';
 import { ALL_KANA, isScript } from '../data/kana';
 import { mnemonicFor } from '../data/mnemonics';
@@ -52,6 +52,9 @@ export function createStudy(root: HTMLElement, state: GameState, onPractice: (ke
   const label = (row: string) => deckFor(deckId).groups.find((g) => g.id === row)!.label;
   /** "ka row" for kana, the plain label ("20–29", "Time of day") otherwise. */
   const rowName = (row: string) => (isScript(deckId) ? `the ${label(row)} row` : label(row));
+  const jp = (c: Card) => japanese(c, state.useKanji);
+  /** The reading under a card: its kana too when kanji are shown. */
+  const reading = (c: Card) => (jp(c) === c.kana ? c.romaji : `<span lang="ja">${c.kana}</span> · ${c.romaji}`);
 
   function dot(c: Card): string {
     const right = state.stats[c.id]?.right ?? 0;
@@ -66,8 +69,8 @@ export function createStudy(root: HTMLElement, state: GameState, onPractice: (ke
           (c) => `
           <button type="button" class="study-item" data-card="${c.id}">
             <span class="study-item-answer">${c.answer}</span>
-            <span class="study-item-kana" lang="ja">${c.kana}</span>
-            <span class="study-item-romaji">${c.romaji}</span>
+            <span class="study-item-kana" lang="ja">${jp(c)}</span>
+            <span class="study-item-romaji">${reading(c)}</span>
             ${dot(c)}
           </button>`,
         )
@@ -113,13 +116,14 @@ export function createStudy(root: HTMLElement, state: GameState, onPractice: (ke
       .map((x) => `<span lang="ja">${x.kana}</span> ${x.romaji}`)
       .join(', ');
     const last = row !== null && index === list.length - 1;
-    const meaning =
-      c.answer === c.romaji ? '' : `<p class="study-answer">${c.answer}${c.kanji ? ` · <span lang="ja">${c.kanji}</span>` : ''}</p>`;
+    // Mention the kanji unless it's already the big text.
+    const kanji = c.kanji && jp(c) !== c.kanji ? ` · <span lang="ja">${c.kanji}</span>` : '';
+    const meaning = c.answer === c.romaji ? '' : `<p class="study-answer">${c.answer}${kanji}</p>`;
     return `
       <div class="study-card" data-script="${deckId}">
         <p class="study-where">${row ? `Studying ${rowName(row)}` : label(c.group)} · ${index + 1} / ${list.length}</p>
-        <div class="study-big${sizeClass(c.kana)}" lang="ja">${c.kana}</div>
-        <p class="study-romaji">${c.romaji}</p>
+        <div class="study-big${sizeClass(jp(c))}" lang="ja">${jp(c)}</div>
+        <p class="study-romaji">${reading(c)}</p>
         ${meaning}
         <ul class="study-tips">${m.tips.map((t) => `<li>${t}</li>`).join('')}</ul>
         ${confuse ? `<p class="study-confuse">Don’t mix up with: ${confuse}</p>` : ''}

@@ -17,6 +17,8 @@ export const UPDATES: Update[] = [
       'New Numbers lesson (×2 sushi): 1–9, every ten up to 99, then hundreds, thousands, 万 (10,000) and beyond, with tips for the tricky ones like さんびゃく and はっせん.',
       'New Greetings lesson (×3 sushi): 25 everyday phrases in 5 groups, from おはようございます to いただきます.',
       'Learn mode works for both, with notes on how each number is built and when to use each phrase.',
+      'One lesson at a time: pick a lesson to play it on its own. Each lesson remembers the rows you picked.',
+      'New Writing switch (かな / 漢字) for numbers and greetings: see words in kanji, the way they’re usually written.',
       'Questions you just got wrong now come back sooner, until you get them right.',
     ],
   },

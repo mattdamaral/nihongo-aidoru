@@ -114,10 +114,10 @@ describe('answer and streak modifiers', () => {
     expect(rewardFor(KA, 1, rewardMods(state))).toBe(3);
   });
 
-  it('selected rows multiply the reward, ignoring unknown keys', () => {
+  it('selected rows of the active lesson multiply the reward, ignoring other lessons and unknown keys', () => {
     const state = defaultState();
     expect(rewardMods(state).rowMult).toBeCloseTo(1.05);
-    state.enabledGroups = ['hiragana:a', 'hiragana:ka', 'katakana:sa', 'hiragana:ka', 'kanji:one'];
+    state.enabledGroups = ['hiragana:a', 'hiragana:ka', 'hiragana:sa', 'hiragana:ka', 'katakana:ta', 'hiragana:zz', 'kanji:one'];
     expect(rewardMods(state).rowMult).toBeCloseTo(1.1);
     expect(rewardFor(KA, 1, rewardMods(state))).toBeCloseTo(1.1);
   });

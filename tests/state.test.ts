@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { defaultState, load, save, SAVE_KEY, type SaveStorage } from '../src/game/state';
+import { rewardMods } from '../src/game/economy';
+import { rowBonus } from '../src/game/scoring';
+import { activeGroups, defaultState, load, save, SAVE_KEY, type SaveStorage } from '../src/game/state';
 
 function memoryStorage(initial?: string): SaveStorage & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -17,13 +19,35 @@ describe('save / load', () => {
     const state = defaultState();
     state.sushi = 42.5;
     state.streak = 3;
-    state.enabledGroups = ['katakana:sa'];
+    state.activeDeck = 'numbers';
+    state.enabledGroups = ['katakana:sa', 'numbers:n20'];
     state.stats['katakana:サ'] = { right: 2, wrong: 1, lastSeen: 123, lastWrong: true };
     state.tools = { shamoji: 3, hangiri: 1 };
     state.toolProgress = { shamoji: 4.5 };
     state.quizMode = 'mixed';
+    state.useKanji = true;
     save(storage, state);
     expect(load(storage)).toEqual(state);
+  });
+
+  it('quizzes one lesson at a time, keeping the other lessons’ rows', () => {
+    const state = { ...defaultState(), activeDeck: 'numbers' as const };
+    state.enabledGroups = ['hiragana:a', 'numbers:n1', 'numbers:n10', 'greetings:time'];
+    expect(activeGroups(state)).toEqual(['numbers:n1', 'numbers:n10']);
+    // The row bonus only counts the lesson being played.
+    expect(rewardMods(state).rowMult).toBeCloseTo(rowBonus(2));
+  });
+
+  it('plays the lesson of the first row for saves from before lessons were separate', () => {
+    const loaded = load(memoryStorage(JSON.stringify({ version: 2, enabledGroups: ['katakana:ka', 'hiragana:a'] })));
+    expect(loaded.activeDeck).toBe('katakana');
+    expect(loaded.useKanji).toBe(false);
+  });
+
+  it('turns on a row if the active lesson has none', () => {
+    const loaded = load(memoryStorage(JSON.stringify({ version: 2, activeDeck: 'greetings', enabledGroups: ['hiragana:a'] })));
+    expect(loaded.activeDeck).toBe('greetings');
+    expect(loaded.enabledGroups).toEqual(['hiragana:a', 'greetings:time']);
   });
 
   it('starts fresh with no save', () => {

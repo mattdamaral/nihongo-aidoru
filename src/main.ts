@@ -3,7 +3,7 @@ import { cardsInGroups } from './data/cards';
 import { AWAY_CAP_S, AWAY_EFFICIENCY, buy, catchUp, rewardMods } from './game/economy';
 import { nextQuestion, type Question } from './game/quiz';
 import { formatDuration, formatSushi, rewardBreakdown, rewardFor } from './game/scoring';
-import { load, save, type GameState } from './game/state';
+import { activeGroups, load, save, type GameState } from './game/state';
 import { createHud } from './ui/hud';
 import { createLessons } from './ui/lessons';
 import { createMenu } from './ui/menu';
@@ -48,7 +48,7 @@ const hud = createHud($('.topbar'), $('.stage'), {
 // Players who haven't answered anything yet are new, so earlier updates aren't news to them.
 const whatsNew = createWhatsNew($('.whatsnew-backdrop'), Object.keys(state.stats).length === 0);
 hud.setUnseen(whatsNew.hasUnseen);
-const quiz = createQuiz($('.quiz'), answer);
+const quiz = createQuiz($('.quiz'), state, answer);
 const shop = createShop($('.shop'), $('.shop-backdrop'), (tool) => {
   if (!buy(state, tool)) return;
   sound.buy();
@@ -61,16 +61,21 @@ const shop = createShop($('.shop'), $('.shop-backdrop'), (tool) => {
 const lessons = createLessons($('.lessons'), $('.lessons-backdrop'), state, {
   onChange: () => {
     persist();
-    // A new question is only needed if the current card was just turned off.
+    // A new question is only needed if the current card was just turned off (or the lesson changed).
     if (answering) return;
-    if (question && cardsInGroups(state.enabledGroups).some((k) => k.id === question!.target.id)) updateShownReward();
+    if (question && cardsInGroups(activeGroups(state)).some((k) => k.id === question!.target.id)) updateShownReward();
     else ask();
   },
   onQuizMode: () => {
     persist();
     if (!answering) ask();
   },
-  onLearn: (script) => study.open(script),
+  onWriting: () => {
+    persist();
+    // Same question, redrawn in kana or kanji.
+    if (question && !answering) quiz.show(question, ...shownReward(question));
+  },
+  onLearn: (deck) => study.open(deck),
 });
 const study = createStudy($('.study-backdrop'), state, (key) => lessons.enableRow(key));
 const menu = createMenu($('.menu-backdrop'), state, sound, (incoming: GameState) => {
@@ -101,7 +106,7 @@ function updateShownReward(): void {
 
 function ask(): void {
   answering = false;
-  const pool = cardsInGroups(state.enabledGroups);
+  const pool = cardsInGroups(activeGroups(state));
   question = nextQuestion(pool, state.stats, question?.target.id ?? null, state.quizMode);
   quiz.show(question, ...shownReward(question));
 }

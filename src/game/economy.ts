@@ -1,7 +1,7 @@
 import { countRows } from '../data/cards';
 import { TOOLS, type Tool } from '../data/tools';
 import { BASE_STREAK_CAP, BASE_STREAK_STEP, rowBonus, type RewardMods } from './scoring';
-import type { GameState } from './state';
+import { activeGroups, type GameState } from './state';
 
 /** Owning this many of a passive tool doubles its output (each milestone stacks). */
 export const MILESTONES = [25, 50, 100];
@@ -58,7 +58,7 @@ export function rewardMods(state: GameState): RewardMods {
     answerBonus: 0,
     streakStep: BASE_STREAK_STEP,
     streakCap: BASE_STREAK_CAP,
-    rowMult: rowBonus(countRows(state.enabledGroups)),
+    rowMult: rowBonus(countRows(activeGroups(state))),
   };
   for (const tool of TOOLS) {
     const n = owned(state, tool);

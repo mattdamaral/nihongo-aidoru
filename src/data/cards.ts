@@ -3,6 +3,7 @@ import { ALL_KANA } from './kana';
 import { NUMBERS } from './numbers';
 
 export type DeckId = 'hiragana' | 'katakana' | 'numbers' | 'greetings';
+export const DECK_IDS: readonly DeckId[] = ['hiragana', 'katakana', 'numbers', 'greetings'];
 
 /** One quiz question's worth of content, from any lesson. */
 export interface Card {
@@ -33,6 +34,9 @@ export interface CardGroup {
 export const ALL_CARDS: Card[] = [...ALL_KANA, ...NUMBERS, ...GREETINGS];
 
 export const groupKey = (deck: DeckId, group: string) => `${deck}:${group}`;
+
+/** The Japanese side as shown: its kanji when that option is on and the card has one. */
+export const japanese = (card: Card, useKanji: boolean) => (useKanji && card.kanji) || card.kana;
 
 const GROUP_KEYS = new Set(ALL_CARDS.map((c) => groupKey(c.deck, c.group)));
 
