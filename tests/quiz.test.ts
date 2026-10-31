@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_KANA, groupKey, kanaInGroups } from '../src/data/kana';
+import { ALL_CARDS, cardsInGroups, groupKey } from '../src/data/cards';
+import { deckFor } from '../src/data/decks';
+import { ALL_KANA } from '../src/data/kana';
+import { LESSONS } from '../src/data/lessons';
 import { nextQuestion } from '../src/game/quiz';
 import { formatSushi, NO_MODS, rewardBreakdown, rewardFor, rowBonus, streakBonus } from '../src/game/scoring';
 import { FLAME, HANGIRI, MAKISU, NIGIRI, SHAMOJI, UCHIWA, YANAGIBA } from '../src/ui/sprites';
@@ -16,18 +19,22 @@ const RUNS = 500;
 
 describe('kana data', () => {
   it('has 71 kana per script with unique ids', () => {
-    expect(ALL_KANA.filter((k) => k.script === 'hiragana')).toHaveLength(71);
-    expect(ALL_KANA.filter((k) => k.script === 'katakana')).toHaveLength(71);
+    expect(ALL_KANA.filter((k) => k.deck === 'hiragana')).toHaveLength(71);
+    expect(ALL_KANA.filter((k) => k.deck === 'katakana')).toHaveLength(71);
     expect(new Set(ALL_KANA.map((k) => k.id)).size).toBe(ALL_KANA.length);
   });
 });
 
 describe('nextQuestion', () => {
   const pools = {
-    starter: kanaInGroups([groupKey('hiragana', 'a'), groupKey('hiragana', 'ka')]),
-    waOnly: kanaInGroups([groupKey('hiragana', 'wa')]),
-    jiZu: kanaInGroups([groupKey('katakana', 'za'), groupKey('katakana', 'da')]),
-    mixed: kanaInGroups([groupKey('hiragana', 'sa'), groupKey('katakana', 'sa')]),
+    starter: cardsInGroups([groupKey('hiragana', 'a'), groupKey('hiragana', 'ka')]),
+    waOnly: cardsInGroups([groupKey('hiragana', 'wa')]),
+    jiZu: cardsInGroups([groupKey('katakana', 'za'), groupKey('katakana', 'da')]),
+    mixed: cardsInGroups([groupKey('hiragana', 'sa'), groupKey('katakana', 'sa')]),
+    forties: cardsInGroups([groupKey('numbers', 'n40')]),
+    bigNumbers: cardsInGroups([groupKey('numbers', 'big')]),
+    greetings: cardsInGroups([groupKey('greetings', 'time'), groupKey('greetings', 'polite')]),
+    numbersAndGreetings: cardsInGroups([groupKey('numbers', 'n1'), groupKey('greetings', 'manners')]),
   };
 
   for (const [name, pool] of Object.entries(pools)) {
@@ -40,9 +47,10 @@ describe('nextQuestion', () => {
         expect(new Set(q.choices.map((k) => k.id)).size).toBe(4);
         expect(q.choices).toContain(q.target);
         expect(pool).toContain(q.target);
-        // Unique romaji means exactly one choice can match the prompt (ぢ/じ, づ/ず).
-        expect(new Set(q.choices.map((k) => k.romaji)).size).toBe(4);
-        expect(q.choices.every((k) => k.script === q.target.script)).toBe(true);
+        // Unique answers and kana mean exactly one choice can match the prompt (ぢ/じ, づ/ず).
+        expect(new Set(q.choices.map((k) => k.answer)).size).toBe(4);
+        expect(new Set(q.choices.map((k) => k.kana)).size).toBe(4);
+        expect(q.choices.every((k) => k.deck === q.target.deck)).toBe(true);
         expect(q.target.id).not.toBe(prev);
         prev = q.target.id;
       }
@@ -52,13 +60,30 @@ describe('nextQuestion', () => {
   it('asks often-missed kana more often', () => {
     const pool = pools.starter;
     const missed = pool[0]!;
-    const stats = { [missed.id]: { right: 0, wrong: 10, lastSeen: Date.now() } };
-    for (const k of pool.slice(1)) stats[k.id] = { right: 10, wrong: 0, lastSeen: Date.now() };
+    const stats = { [missed.id]: { right: 0, wrong: 10, lastSeen: Date.now(), lastWrong: false } };
+    for (const k of pool.slice(1)) stats[k.id] = { right: 10, wrong: 0, lastSeen: Date.now(), lastWrong: false };
     const rng = seeded(7);
     let hits = 0;
     for (let i = 0; i < RUNS; i++) if (nextQuestion(pool, stats, null, 'pick-kana', rng).target.id === missed.id) hits++;
     // Uniform would be 1/10 of runs.
     expect(hits).toBeGreaterThan(RUNS / 5);
+  });
+
+  it('brings a just-missed card back sooner', () => {
+    const pool = pools.forties;
+    const now = Date.now();
+    const seen = (lastWrong: boolean) => ({ right: 1, wrong: 1, lastSeen: now, lastWrong });
+    const stats = Object.fromEntries(pool.map((c) => [c.id, seen(false)]));
+    const missed = pool[3]!;
+    const rate = (lastWrong: boolean) => {
+      stats[missed.id] = seen(lastWrong);
+      const rng = seeded(11);
+      let hits = 0;
+      for (let i = 0; i < RUNS; i++) if (nextQuestion(pool, stats, null, 'pick-kana', rng, now).target.id === missed.id) hits++;
+      return hits / RUNS;
+    };
+    // Same history, but the last answer was wrong: about twice as likely to come up.
+    expect(rate(true)).toBeGreaterThan(rate(false) * 1.6);
   });
 
   it('follows the quiz mode, mixing both directions in mixed mode', () => {
@@ -98,6 +123,13 @@ describe('scoring', () => {
     const kata = ALL_KANA.find((k) => k.id === 'katakana:カ')!;
     expect(rewardFor(hira, 1)).toBe(1);
     expect(rewardFor(kata, 1)).toBe(1.5);
+  });
+
+  it('ranks lessons: each ready lesson pays more than the one before', () => {
+    const decks = LESSONS.flatMap((l) => (l.deck ? [deckFor(l.deck)] : []));
+    expect(decks.map((d) => d.multiplier)).toEqual([1, 1.5, 2, 3]);
+    const fortyTwo = ALL_CARDS.find((c) => c.id === 'numbers:42')!;
+    expect(rewardBreakdown(fortyTwo, 1)).toBe('1 base × 2 numbers × 1 rows × 1 streak');
   });
 
   it('formats big numbers compactly', () => {

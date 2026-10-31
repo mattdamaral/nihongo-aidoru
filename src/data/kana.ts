@@ -1,15 +1,8 @@
+import type { Card } from './cards';
+
 export type Script = 'hiragana' | 'katakana';
 
-export interface Kana {
-  /** Unique id, e.g. "hiragana:ka". */
-  id: string;
-  kana: string;
-  /** Hepburn romanization shown as the quiz prompt. */
-  romaji: string;
-  script: Script;
-  /** Row id, e.g. "ka". Combined with script it forms a group key. */
-  group: string;
-}
+export const isScript = (deck: string): deck is Script => deck === 'hiragana' || deck === 'katakana';
 
 export interface KanaGroup {
   id: string;
@@ -37,34 +30,18 @@ export const GROUPS: KanaGroup[] = [
   { id: 'pa', label: 'pa', rows: [['pa', 'ぱ', 'パ'], ['pi', 'ぴ', 'ピ'], ['pu', 'ぷ', 'プ'], ['pe', 'ぺ', 'ペ'], ['po', 'ぽ', 'ポ']] },
 ];
 
-function build(): Kana[] {
-  const out: Kana[] = [];
-  for (const script of ['hiragana', 'katakana'] as const) {
+function build(): Card[] {
+  const out: Card[] = [];
+  for (const deck of ['hiragana', 'katakana'] as const) {
     for (const g of GROUPS) {
       for (const [romaji, hira, kata] of g.rows) {
-        const kana = script === 'hiragana' ? hira : kata;
+        const kana = deck === 'hiragana' ? hira : kata;
         // ぢ/づ share romaji with じ/ず, so ids use the kana itself to stay unique.
-        out.push({ id: `${script}:${kana}`, kana, romaji, script, group: g.id });
+        out.push({ id: `${deck}:${kana}`, deck, group: g.id, kana, romaji, answer: romaji });
       }
     }
   }
   return out;
 }
 
-export const ALL_KANA: Kana[] = build();
-
-export const groupKey = (script: Script, group: string) => `${script}:${group}`;
-
-const GROUP_KEYS = new Set(
-  (['hiragana', 'katakana'] as const).flatMap((script) => GROUPS.map((g) => groupKey(script, g.id))),
-);
-
-/** Number of distinct, real rows among `keys` (ignores junk from old saves). */
-export function countRows(keys: Iterable<string>): number {
-  return [...new Set(keys)].filter((k) => GROUP_KEYS.has(k)).length;
-}
-
-export function kanaInGroups(groupKeys: Iterable<string>): Kana[] {
-  const keys = new Set(groupKeys);
-  return ALL_KANA.filter((k) => keys.has(groupKey(k.script, k.group)));
-}
+export const ALL_KANA: Card[] = build();

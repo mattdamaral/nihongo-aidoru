@@ -1,6 +1,15 @@
+import type { Card } from '../data/cards';
 import { deckFor } from '../data/decks';
+import { isScript } from '../data/kana';
 import type { Question } from '../game/quiz';
 import { formatReward } from '../game/scoring';
+
+/** Extra class that shrinks long text (greetings, big numbers) so it fits. */
+export const sizeClass = (text: string) => (text.length > 9 ? ' is-longer' : text.length > 4 ? ' is-long' : '');
+
+/** "か = ka", or "よんじゅうに (yonjuuni) = 42" when the answer isn't the romaji. */
+const explain = (c: Card) =>
+  `<span lang="ja">${c.kana}</span>${c.answer === c.romaji ? '' : ` (${c.romaji})`} = ${c.answer}`;
 
 export interface QuizView {
   /** `detail` explains the reward (shown as a tooltip). */
@@ -15,7 +24,7 @@ export interface QuizView {
 
 const KEYS = ['1', '2', '3', '4'];
 
-export function createQuiz(root: HTMLElement, onAnswer: (kanaId: string) => void): QuizView {
+export function createQuiz(root: HTMLElement, onAnswer: (cardId: string) => void): QuizView {
   root.innerHTML = `
     <div class="quiz-head">
       <span class="quiz-script"></span>
@@ -49,24 +58,27 @@ export function createQuiz(root: HTMLElement, onAnswer: (kanaId: string) => void
     show(question, reward, detail) {
       current = question;
       locked = false;
-      const deck = deckFor(question.target.script);
+      const deck = deckFor(question.target.deck);
       scriptEl.textContent = `${deck.name} ${deck.jpName}`;
       scriptEl.dataset.script = deck.id;
       setWorth(reward, detail);
       const pickKana = question.direction === 'pick-kana';
-      labelEl.textContent = pickKana ? 'Pick the kana for' : 'Pick the romaji for';
-      promptEl.textContent = pickKana ? question.target.romaji : question.target.kana;
-      promptEl.lang = pickKana ? 'ja-Latn' : 'ja';
+      const prompt = pickKana ? question.target.answer : question.target.kana;
+      labelEl.textContent = deck.labels[question.direction];
+      promptEl.textContent = prompt;
+      promptEl.className = `quiz-prompt${sizeClass(prompt)}`;
+      // Kana decks' answers are romaji; numbers and greetings answer in plain English.
+      promptEl.lang = pickKana ? (isScript(deck.id) ? 'ja-Latn' : 'en') : 'ja';
       feedbackEl.textContent = '';
       feedbackEl.className = 'quiz-feedback';
       choicesEl.innerHTML = question.choices
         .map(
-          (k, i) => `
-          <button type="button" class="choice" data-id="${k.id}">
+          (c, i) => `
+          <button type="button" class="choice" data-id="${c.id}">
             <kbd>${KEYS[i]}</kbd>${
               pickKana
-                ? `<span class="choice-kana" lang="ja">${k.kana}</span>`
-                : `<span class="choice-romaji" lang="ja-Latn">${k.romaji}</span>`
+                ? `<span class="choice-kana${sizeClass(c.kana)}" lang="ja">${c.kana}</span>`
+                : `<span class="choice-romaji${sizeClass(c.answer)}">${c.answer}</span>`
             }
           </button>`,
         )
@@ -83,10 +95,10 @@ export function createQuiz(root: HTMLElement, onAnswer: (kanaId: string) => void
         else if (btn.dataset.id === chosenId) btn.classList.add('is-wrong');
       }
       if (reward !== null) {
-        feedbackEl.textContent = `${target.kana} = ${target.romaji}  ${formatReward(reward)}`;
+        feedbackEl.innerHTML = `${explain(target)} &nbsp;${formatReward(reward)}`;
         feedbackEl.classList.add('is-good');
       } else if (chosen) {
-        feedbackEl.innerHTML = `<span lang="ja">${chosen.kana}</span> is ${chosen.romaji} · <span lang="ja">${target.kana}</span> is ${target.romaji}`;
+        feedbackEl.innerHTML = `${explain(chosen)} · ${explain(target)}`;
         feedbackEl.classList.add('is-bad');
       }
     },

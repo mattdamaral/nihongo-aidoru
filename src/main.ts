@@ -1,5 +1,5 @@
 import './style.css';
-import { kanaInGroups } from './data/kana';
+import { cardsInGroups } from './data/cards';
 import { AWAY_CAP_S, AWAY_EFFICIENCY, buy, catchUp, rewardMods } from './game/economy';
 import { nextQuestion, type Question } from './game/quiz';
 import { formatDuration, formatSushi, rewardBreakdown, rewardFor } from './game/scoring';
@@ -61,9 +61,9 @@ const shop = createShop($('.shop'), $('.shop-backdrop'), (tool) => {
 const lessons = createLessons($('.lessons'), $('.lessons-backdrop'), state, {
   onChange: () => {
     persist();
-    // A new question is only needed if the current kana was just turned off.
+    // A new question is only needed if the current card was just turned off.
     if (answering) return;
-    if (question && kanaInGroups(state.enabledGroups).some((k) => k.id === question!.target.id)) updateShownReward();
+    if (question && cardsInGroups(state.enabledGroups).some((k) => k.id === question!.target.id)) updateShownReward();
     else ask();
   },
   onQuizMode: () => {
@@ -101,20 +101,21 @@ function updateShownReward(): void {
 
 function ask(): void {
   answering = false;
-  const pool = kanaInGroups(state.enabledGroups);
+  const pool = cardsInGroups(state.enabledGroups);
   question = nextQuestion(pool, state.stats, question?.target.id ?? null, state.quizMode);
   quiz.show(question, ...shownReward(question));
 }
 
-function answer(kanaId: string): void {
+function answer(cardId: string): void {
   if (!question) return;
   answering = true;
   const target = question.target;
-  const stat = (state.stats[target.id] ??= { right: 0, wrong: 0, lastSeen: 0 });
+  const stat = (state.stats[target.id] ??= { right: 0, wrong: 0, lastSeen: 0, lastWrong: false });
   stat.lastSeen = Date.now();
 
-  if (kanaId === target.id) {
+  if (cardId === target.id) {
     stat.right++;
+    stat.lastWrong = false;
     state.streak++;
     state.bestStreak = Math.max(state.bestStreak, state.streak);
     const reward = rewardFor(target, state.streak, rewardMods(state));
@@ -122,14 +123,15 @@ function answer(kanaId: string): void {
     state.totalEarned += reward;
     sound.correct();
     hud.celebrate(reward);
-    quiz.reveal(kanaId, reward);
+    quiz.reveal(cardId, reward);
     setTimeout(ask, NEXT_DELAY_CORRECT);
   } else {
     stat.wrong++;
+    stat.lastWrong = true;
     state.streak = 0;
     sound.wrong();
     hud.wobble();
-    quiz.reveal(kanaId, null);
+    quiz.reveal(cardId, null);
     setTimeout(ask, NEXT_DELAY_WRONG);
   }
   refresh();

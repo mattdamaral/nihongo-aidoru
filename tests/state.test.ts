@@ -18,7 +18,7 @@ describe('save / load', () => {
     state.sushi = 42.5;
     state.streak = 3;
     state.enabledGroups = ['katakana:sa'];
-    state.stats['katakana:サ'] = { right: 2, wrong: 1, lastSeen: 123 };
+    state.stats['katakana:サ'] = { right: 2, wrong: 1, lastSeen: 123, lastWrong: true };
     state.tools = { shamoji: 3, hangiri: 1 };
     state.toolProgress = { shamoji: 4.5 };
     state.quizMode = 'mixed';
@@ -52,7 +52,7 @@ describe('save / load', () => {
     };
     const loaded = load(memoryStorage(JSON.stringify(v1)));
     expect(loaded).toMatchObject({ version: 2, sushi: 77.5, bestStreak: 12, enabledGroups: ['hiragana:sa'] });
-    expect(loaded.stats['hiragana:さ']).toEqual(v1.stats['hiragana:さ']);
+    expect(loaded.stats['hiragana:さ']).toEqual({ ...v1.stats['hiragana:さ'], lastWrong: false });
     expect(loaded.tools).toEqual({});
     // No tools yet, so there's nothing to pay out for the time since the v1 save.
     expect(loaded.lastTick).toBe(1_000);

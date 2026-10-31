@@ -1,4 +1,5 @@
-import { GROUPS, type Kana } from './kana';
+import type { Card } from './cards';
+import { GROUPS } from './kana';
 
 export interface Mnemonic {
   tips: string[];
@@ -158,14 +159,14 @@ const VOICING: Record<string, [plain: string, how: string, twin?: string]> = {
 const SOUND_TWINS: Record<string, string> = { ぢ: 'じ', づ: 'ず', ヂ: 'ジ', ヅ: 'ズ' };
 
 /** Looks up the kana in the same script at the same position of another row. */
-function sibling(kana: Kana, rowId: string): [romaji: string, char: string] {
+function sibling(kana: Card, rowId: string): [romaji: string, char: string] {
   const row = GROUPS.find((g) => g.id === kana.group)!;
   const index = row.rows.findIndex(([, h, k]) => h === kana.kana || k === kana.kana);
   const [romaji, h, k] = GROUPS.find((g) => g.id === rowId)!.rows[index]!;
-  return [romaji, kana.script === 'hiragana' ? h : k];
+  return [romaji, kana.deck === 'hiragana' ? h : k];
 }
 
-export function mnemonicFor(kana: Kana): Mnemonic {
+export function mnemonicFor(kana: Card): Mnemonic {
   const basic = BASIC[kana.kana];
   if (basic) return { tips: basic[0], confuse: basic[1] ?? [] };
 

@@ -16,7 +16,7 @@ describe('mnemonics', () => {
       for (const other of mnemonicFor(kana).confuse) {
         const match = ALL_KANA.find((k) => k.kana === other);
         expect(match, `${kana.kana} → ${other}`).toBeDefined();
-        expect(match!.script, `${kana.kana} → ${other}`).toBe(kana.script);
+        expect(match!.deck, `${kana.kana} → ${other}`).toBe(kana.deck);
         expect(other).not.toBe(kana.kana);
       }
     }

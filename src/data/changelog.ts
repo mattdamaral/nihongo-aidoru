@@ -10,6 +10,17 @@ export interface Update {
 /** Player-facing update notes, newest first. Add a new entry at the top for each release. */
 export const UPDATES: Update[] = [
   {
+    id: '2026-10-31-numbers-greetings',
+    date: '2026-10-31',
+    title: 'Numbers & greetings',
+    items: [
+      'New Numbers lesson (×2 sushi): 1–9, every ten up to 99, then hundreds, thousands, 万 (10,000) and beyond, with tips for the tricky ones like さんびゃく and はっせん.',
+      'New Greetings lesson (×3 sushi): 25 everyday phrases in 5 groups, from おはようございます to いただきます.',
+      'Learn mode works for both, with notes on how each number is built and when to use each phrase.',
+      'Questions you just got wrong now come back sooner, until you get them right.',
+    ],
+  },
+  {
     id: '2026-10-31-quiz-both-ways',
     date: '2026-10-31',
     title: 'Quiz both ways',

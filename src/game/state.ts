@@ -1,12 +1,14 @@
-import { groupKey } from '../data/kana';
+import { groupKey } from '../data/cards';
 import { TOOL_IDS } from '../data/tools';
 import { STORAGE_PREFIX } from './storage';
 
-export interface KanaStat {
+export interface CardStat {
   right: number;
   wrong: number;
-  /** Epoch ms of the last time this kana was asked. */
+  /** Epoch ms of the last time this card was asked. */
   lastSeen: number;
+  /** True if the last answer to this card was wrong. */
+  lastWrong: boolean;
 }
 
 /** What the quiz shows: romaji to pick the kana, kana to pick the romaji, or either at random. */
@@ -21,7 +23,7 @@ export interface GameState {
   bestStreak: number;
   /** Group keys like "hiragana:ka". */
   enabledGroups: string[];
-  stats: Record<string, KanaStat>;
+  stats: Record<string, CardStat>;
   quizMode: QuizMode;
   /** Tool id → number owned. */
   tools: Record<string, number>;
@@ -75,11 +77,12 @@ export function parseState(raw: unknown): GameState | null {
   if (r.version !== 1 && r.version !== 2) return null;
   const fresh = defaultState();
 
-  const stats: Record<string, KanaStat> = {};
+  const stats: Record<string, CardStat> = {};
   if (typeof r.stats === 'object' && r.stats !== null) {
-    for (const [id, s] of Object.entries(r.stats as Record<string, Partial<KanaStat>>)) {
+    for (const [id, s] of Object.entries(r.stats as Record<string, Partial<CardStat>>)) {
       if (s && isNum(s.right) && isNum(s.wrong) && isNum(s.lastSeen)) {
-        stats[id] = { right: s.right, wrong: s.wrong, lastSeen: s.lastSeen };
+        // Older saves have no lastWrong; treating it as false is the safe default.
+        stats[id] = { right: s.right, wrong: s.wrong, lastSeen: s.lastSeen, lastWrong: s.lastWrong === true };
       }
     }
   }

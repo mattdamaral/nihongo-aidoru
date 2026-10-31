@@ -1,4 +1,4 @@
-import { countRows } from '../data/kana';
+import { countRows } from '../data/cards';
 import { TOOLS, type Tool } from '../data/tools';
 import { BASE_STREAK_CAP, BASE_STREAK_STEP, rowBonus, type RewardMods } from './scoring';
 import type { GameState } from './state';

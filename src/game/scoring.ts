@@ -1,11 +1,11 @@
 import { deckFor } from '../data/decks';
-import type { Kana } from '../data/kana';
+import type { Card } from '../data/cards';
 
 const BASE_REWARD = 1;
 const STREAK_STEP = 5;
 export const BASE_STREAK_STEP = 0.1;
 export const BASE_STREAK_CAP = 2;
-/** Extra multiplier per selected kana row beyond the first. */
+/** Extra multiplier per selected row beyond the first. */
 export const ROW_BONUS = 0.05;
 
 export interface RewardMods {
@@ -36,20 +36,20 @@ export function rowBonus(rows: number): number {
   return 1 + ROW_BONUS * Math.max(rows - 1, 0);
 }
 
-/** Sushi earned for answering `kana` correctly with `streak` already including this answer. */
-export function rewardFor(kana: Kana, streak: number, mods: RewardMods = NO_MODS): number {
+/** Sushi earned for answering `card` correctly with `streak` already including this answer. */
+export function rewardFor(card: Card, streak: number, mods: RewardMods = NO_MODS): number {
   return (
     (BASE_REWARD + mods.answerBonus) *
-    deckFor(kana.script).multiplier *
+    deckFor(card.deck).multiplier *
     mods.rowMult *
     streakBonus(streak, mods.streakStep, mods.streakCap)
   );
 }
 
 /** Explains a reward, e.g. "2 base × 1.5 katakana × 1.25 rows × 1.1 streak". */
-export function rewardBreakdown(kana: Kana, streak: number, mods: RewardMods = NO_MODS): string {
+export function rewardBreakdown(card: Card, streak: number, mods: RewardMods = NO_MODS): string {
   const n = (v: number) => String(Number(v.toFixed(2)));
-  const deck = deckFor(kana.script);
+  const deck = deckFor(card.deck);
   return [
     `${n(BASE_REWARD + mods.answerBonus)} base`,
     `${n(deck.multiplier)} ${deck.name.toLowerCase()}`,

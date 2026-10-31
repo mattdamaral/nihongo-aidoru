@@ -1,5 +1,5 @@
+import { ALL_CARDS, countRows, groupKey, type DeckId } from '../data/cards';
 import { deckFor } from '../data/decks';
-import { ALL_KANA, countRows, GROUPS, groupKey, type Script } from '../data/kana';
 import { LESSONS } from '../data/lessons';
 import { rowBonus } from '../game/scoring';
 import type { GameState, QuizMode } from '../game/state';
@@ -22,26 +22,25 @@ export interface LessonsActions {
   onChange(): void;
   /** Fires after `state.quizMode` changes. */
   onQuizMode(): void;
-  onLearn(script: Script): void;
+  onLearn(deck: DeckId): void;
 }
 
-const BASIC = ['a', 'ka', 'sa', 'ta', 'na', 'ha', 'ma', 'ya', 'ra', 'wa'];
-/** Correct answers needed per kana to fill its share of the mastery bar. */
+/** Correct answers needed per card to fill its share of the mastery bar. */
 export const MASTERY_TARGET = 5;
-const HINT = 'Pick the rows to practice. More rows and harder scripts pay more sushi.';
+const HINT = 'Pick the rows to practice. More rows and harder lessons pay more sushi.';
 
 function mastery(state: GameState, key: string): number {
-  const kana = ALL_KANA.filter((k) => groupKey(k.script, k.group) === key);
-  const score = kana.reduce((sum, k) => sum + Math.min(state.stats[k.id]?.right ?? 0, MASTERY_TARGET), 0);
-  return score / (kana.length * MASTERY_TARGET);
+  const cards = ALL_CARDS.filter((c) => groupKey(c.deck, c.group) === key);
+  const score = cards.reduce((sum, c) => sum + Math.min(state.stats[c.id]?.right ?? 0, MASTERY_TARGET), 0);
+  return score / (cards.length * MASTERY_TARGET);
 }
 
-const rowsOn = (state: GameState, script: Script) =>
-  state.enabledGroups.filter((k) => k.startsWith(`${script}:`)).length;
+const rowsOn = (state: GameState, deck: DeckId) =>
+  state.enabledGroups.filter((k) => k.startsWith(`${deck}:`)).length;
 
 /**
  * Lessons panel: a left column on wide screens, a drawer from the left otherwise.
- * Lists every lesson; the selected kana lesson expands to its row chips.
+ * Lists every lesson; the selected lesson expands to its row chips.
  */
 export function createLessons(
   root: HTMLElement,
@@ -60,8 +59,8 @@ export function createLessons(
     <p class="lessons-hint" aria-live="polite"></p>
     <div class="quiz-mode" role="group" aria-label="Quiz direction">
       <span class="quiz-mode-label">Quiz</span>
-      <button type="button" class="btn btn-small" data-mode="pick-kana" title="See the romaji, pick the kana">a → <span lang="ja">あ</span></button>
-      <button type="button" class="btn btn-small" data-mode="pick-romaji" title="See the kana, pick the romaji"><span lang="ja">あ</span> → a</button>
+      <button type="button" class="btn btn-small" data-mode="pick-kana" title="See the romaji, number or meaning; pick the Japanese">a → <span lang="ja">あ</span></button>
+      <button type="button" class="btn btn-small" data-mode="pick-romaji" title="See the Japanese; pick the romaji, number or meaning"><span lang="ja">あ</span> → a</button>
       <button type="button" class="btn btn-small" data-mode="mixed" title="A random mix of both">Mixed</button>
     </div>
     <div class="lesson-list"></div>
@@ -70,35 +69,38 @@ export function createLessons(
   const hintEl = root.querySelector<HTMLElement>('.lessons-hint')!;
   const modeEl = root.querySelector<HTMLElement>('.quiz-mode')!;
   const list = root.querySelector<HTMLElement>('.lesson-list')!;
-  const firstScript = state.enabledGroups[0]?.split(':')[0];
-  let selected: Script = firstScript === 'katakana' ? 'katakana' : 'hiragana';
+  const firstDeck = state.enabledGroups[0]?.split(':')[0];
+  let selected: DeckId = LESSONS.find((l) => l.deck === firstDeck)?.deck ?? 'hiragana';
   let isOpen = false;
 
-  function chip(script: Script, groupId: string): string {
-    const g = GROUPS.find((x) => x.id === groupId)!;
-    const key = groupKey(script, groupId);
-    const kana = g.rows.map(([, h, k]) => (script === 'hiragana' ? h : k)).join('');
+  function chip(deckId: DeckId, groupId: string): string {
+    const g = deckFor(deckId).groups.find((x) => x.id === groupId)!;
+    const key = groupKey(deckId, groupId);
     return `
       <label class="chip" data-key="${key}">
         <input type="checkbox" value="${key}" ${state.enabledGroups.includes(key) ? 'checked' : ''} />
-        <span class="chip-kana" lang="ja">${kana}</span>
+        <span class="chip-kana" lang="ja">${g.preview}</span>
         <span class="chip-label">${g.label}</span>
         <span class="chip-bar"><span></span></span>
       </label>`;
   }
 
-  function detail(script: Script): string {
-    const deck = deckFor(script);
+  function detail(deckId: DeckId): string {
+    const deck = deckFor(deckId);
     return `
-      <div class="lesson-detail" data-deck="${script}">
+      <div class="lesson-detail" data-deck="${deckId}">
         <div class="lesson-actions">
-          <button type="button" class="btn learn-btn" data-learn="${script}">Learn</button>
-          <button type="button" class="btn btn-small" data-all="${script}">All</button>
-          <button type="button" class="btn btn-small" data-none="${script}">None</button>
+          <button type="button" class="btn learn-btn" data-learn="${deckId}">Learn</button>
+          <button type="button" class="btn btn-small" data-all="${deckId}">All</button>
+          <button type="button" class="btn btn-small" data-none="${deckId}">None</button>
         </div>
-        <div class="chips">${deck.groups.filter((g) => BASIC.includes(g)).map((g) => chip(script, g)).join('')}</div>
-        <h4 class="chips-sub">Dakuten <span lang="ja">゛゜</span></h4>
-        <div class="chips">${deck.groups.filter((g) => !BASIC.includes(g)).map((g) => chip(script, g)).join('')}</div>
+        ${deck.sections
+          .map(
+            (s) => `
+          ${s.title ? `<h4 class="chips-sub">${s.title}</h4>` : ''}
+          <div class="chips">${s.groups.map((g) => chip(deckId, g)).join('')}</div>`,
+          )
+          .join('')}
       </div>`;
   }
 
@@ -131,9 +133,9 @@ export function createLessons(
       btn.setAttribute('aria-pressed', String(btn.dataset.mode === state.quizMode));
     }
     for (const el of list.querySelectorAll<HTMLElement>('[data-lesson]')) {
-      const script = el.dataset.lesson as Script;
-      const on = rowsOn(state, script);
-      el.querySelector('.lesson-meta')!.textContent = `×${deckFor(script).multiplier} · ${on ? `${on} on` : 'off'}`;
+      const deck = el.dataset.lesson as DeckId;
+      const on = rowsOn(state, deck);
+      el.querySelector('.lesson-meta')!.textContent = `×${deckFor(deck).multiplier} · ${on ? `${on} on` : 'off'}`;
       el.classList.toggle('is-on', on > 0);
     }
     for (const el of list.querySelectorAll<HTMLElement>('.chip')) {
@@ -170,14 +172,14 @@ export function createLessons(
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
     if (!btn) return;
     if (btn.dataset.lesson) {
-      selected = btn.dataset.lesson as Script;
+      selected = btn.dataset.lesson as DeckId;
       render();
     } else if (btn.dataset.learn) {
-      actions.onLearn(btn.dataset.learn as Script);
+      actions.onLearn(btn.dataset.learn as DeckId);
     } else {
-      const script = (btn.dataset.all ?? btn.dataset.none) as Script | undefined;
-      if (!script) return;
-      const keys = deckFor(script).groups.map((g) => groupKey(script, g));
+      const deck = (btn.dataset.all ?? btn.dataset.none) as DeckId | undefined;
+      if (!deck) return;
+      const keys = deckFor(deck).groups.map((g) => groupKey(deck, g.id));
       const others = state.enabledGroups.filter((k) => !keys.includes(k));
       setGroups(btn.dataset.all ? [...others, ...keys] : others);
     }
@@ -207,7 +209,7 @@ export function createLessons(
     rebuild: render,
     enableRow(key) {
       if (state.enabledGroups.includes(key)) return;
-      selected = key.split(':')[0] as Script;
+      selected = key.split(':')[0] as DeckId;
       setGroups([...state.enabledGroups, key]);
     },
     open: () => setOpen(true),
