@@ -1,5 +1,6 @@
 import { groupKey } from '../data/kana';
 import { TOOL_IDS } from '../data/tools';
+import { STORAGE_PREFIX } from './storage';
 
 export interface KanaStat {
   right: number;
@@ -26,7 +27,7 @@ export interface GameState {
   lastSaved: number;
 }
 
-export const SAVE_KEY = 'nihongo-aidoru:save';
+export const SAVE_KEY = `${STORAGE_PREFIX}:save`;
 
 export type SaveStorage = Pick<Storage, 'getItem' | 'setItem'>;
 

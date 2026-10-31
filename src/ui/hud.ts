@@ -1,5 +1,6 @@
 import { passiveRate, rewardMods } from '../game/economy';
 import type { GameState } from '../game/state';
+import { IS_DEV_BUILD } from '../game/storage';
 import { formatRate, formatReward, formatSushi, streakBonus } from '../game/scoring';
 import { FLAME, NIGIRI, spriteSvg } from './sprites';
 
@@ -30,6 +31,7 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
         <span class="counter-value">0</span>
         <span class="counter-rate" title="Idle sushi per second from your kitchen tools">+0/s</span>
       </div>
+      ${IS_DEV_BUILD ? '<span class="dev-badge" title="Dev preview: test build with its own save">DEV</span>' : ''}
     </div>
     <div class="streak">
       ${spriteSvg(FLAME, 'streak-icon')}

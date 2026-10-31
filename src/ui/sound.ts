@@ -1,4 +1,6 @@
-const SETTINGS_KEY = 'nihongo-aidoru:settings';
+import { STORAGE_PREFIX } from '../game/storage';
+
+const SETTINGS_KEY = `${STORAGE_PREFIX}:settings`;
 /** Master volume at 100% on the slider; kept low so sounds stay in the background. */
 const MAX_GAIN = 0.16;
 /** The same sound won't restart more often than this. */

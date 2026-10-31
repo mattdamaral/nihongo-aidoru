@@ -1,8 +1,10 @@
 name: Deploy to GitHub Pages
 
+# One Pages site holds both builds: main at /nihongo-aidoru/ and the dev
+# preview at /nihongo-aidoru/dev/. Every run rebuilds both from their branch tips.
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 permissions:
@@ -19,16 +21,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: main
+          path: prod
+      - id: dev
+        working-directory: prod
+        run: |
+          if git ls-remote --exit-code --heads origin dev > /dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.dev.outputs.exists == 'true'
+        uses: actions/checkout@v7
+        with:
+          ref: dev
+          path: dev
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
+          cache-dependency-path: '*/package-lock.json'
+
+      - working-directory: prod
+        run: npm ci && npm test && npm run build
+
+      - if: steps.dev.outputs.exists == 'true'
+        working-directory: dev
+        # --mode dev builds for /nihongo-aidoru/dev/ with separate save keys (vite.config.ts).
+        run: npm ci && npm test && npm run build -- --mode dev
+      - if: steps.dev.outputs.exists == 'true'
+        run: cp -r dev/dist prod/dist/dev
+
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: dist
+          path: prod/dist
 
   deploy:
     needs: build

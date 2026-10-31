@@ -145,6 +145,14 @@ kbd {
   font-size: 12px;
 }
 
+.dev-badge {
+  flex: none;
+  padding: 1px 5px;
+  border: 2px solid var(--katakana);
+  color: var(--katakana);
+  font-size: 11px;
+}
+
 .topbar-actions {
   display: flex;
   gap: 6px;
