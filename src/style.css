@@ -169,6 +169,21 @@ kbd {
   border-color: var(--danger);
 }
 
+.new-btn {
+  position: relative;
+}
+
+.new-btn.has-dot::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 9px;
+  height: 9px;
+  background: var(--salmon);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
 .streak {
   display: flex;
   align-items: center;
@@ -452,6 +467,47 @@ kbd {
   overflow-y: auto;
   margin: 0 -4px;
   padding: 0 4px 8px;
+}
+
+/* ---------- What's new ---------- */
+
+.update {
+  margin-top: 14px;
+}
+
+.update + .update {
+  padding-top: 12px;
+  border-top: 2px dashed var(--border);
+}
+
+.update h3 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.update-title {
+  color: var(--gold);
+}
+
+.update time {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.update ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.update li + li {
+  margin-top: 4px;
 }
 
 .chips-sub {

@@ -8,11 +8,14 @@ export interface Hud {
   update(state: GameState): void;
   celebrate(reward: number): void;
   wobble(): void;
+  /** Shows or hides the dot on the "What's new" button. */
+  setUnseen(on: boolean): void;
 }
 
 export interface HudActions {
   onLessons(): void;
   onShop(): void;
+  onWhatsNew(): void;
   onMenu(): void;
 }
 
@@ -41,6 +44,7 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
     <nav class="topbar-actions">
       <button type="button" class="btn btn-icon lessons-btn" title="Lessons (L)">Lessons</button>
       <button type="button" class="btn btn-icon shop-btn" title="Shop (B)" aria-label="Shop">Shop</button>
+      <button type="button" class="btn btn-icon new-btn" title="What’s new" aria-label="What’s new">New</button>
       <button type="button" class="btn btn-icon menu-btn" title="Menu: sound, save / load" aria-label="Menu">≡</button>
     </nav>
   `;
@@ -61,6 +65,8 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
   const popups = stage.querySelector<HTMLElement>('.popups')!;
   topbar.querySelector('.lessons-btn')!.addEventListener('click', actions.onLessons);
   topbar.querySelector('.shop-btn')!.addEventListener('click', actions.onShop);
+  const newBtn = topbar.querySelector<HTMLElement>('.new-btn')!;
+  newBtn.addEventListener('click', actions.onWhatsNew);
   topbar.querySelector('.menu-btn')!.addEventListener('click', actions.onMenu);
 
   return {
@@ -87,6 +93,10 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
     },
     wobble() {
       replay(sushi, 'wobble');
+    },
+    setUnseen(on) {
+      newBtn.classList.toggle('has-dot', on);
+      newBtn.setAttribute('aria-label', on ? 'What’s new (unread update)' : 'What’s new');
     },
   };
 }

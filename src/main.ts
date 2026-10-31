@@ -12,6 +12,7 @@ import { createShop } from './ui/shop';
 import { createSound } from './ui/sound';
 import { createStudy } from './ui/study';
 import { createToast } from './ui/toast';
+import { createWhatsNew } from './ui/whatsnew';
 
 const NEXT_DELAY_CORRECT = 450;
 const NEXT_DELAY_WRONG = 1600;
@@ -38,8 +39,15 @@ const hud = createHud($('.topbar'), $('.stage'), {
     lessons.close();
     shop.toggle();
   },
+  onWhatsNew: () => {
+    whatsNew.open();
+    hud.setUnseen(false);
+  },
   onMenu: () => menu.open(),
 });
+// Players who haven't answered anything yet are new, so earlier updates aren't news to them.
+const whatsNew = createWhatsNew($('.whatsnew-backdrop'), Object.keys(state.stats).length === 0);
+hud.setUnseen(whatsNew.hasUnseen);
 const quiz = createQuiz($('.quiz'), answer);
 const shop = createShop($('.shop'), $('.shop-backdrop'), (tool) => {
   if (!buy(state, tool)) return;
@@ -159,6 +167,10 @@ document.addEventListener('keydown', (e) => {
   }
   if (menu.isOpen) {
     if (key === 'escape') menu.close();
+    return;
+  }
+  if (whatsNew.isOpen) {
+    if (key === 'escape') whatsNew.close();
     return;
   }
   if (key === 'escape') {
