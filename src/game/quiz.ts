@@ -1,10 +1,14 @@
 import { ALL_KANA, type Kana } from '../data/kana';
-import type { KanaStat } from './state';
+import type { KanaStat, QuizMode } from './state';
+
+/** The direction of a single question; "mixed" mode picks one per question. */
+export type Direction = Exclude<QuizMode, 'mixed'>;
 
 export interface Question {
   target: Kana;
   /** Four shuffled options, one of which is the target. */
   choices: Kana[];
+  direction: Direction;
 }
 
 export type Rng = () => number;
@@ -47,6 +51,7 @@ export function nextQuestion(
   pool: Kana[],
   stats: Record<string, KanaStat>,
   previousId: string | null,
+  mode: QuizMode = 'pick-kana',
   rng: Rng = Math.random,
   now: number = Date.now(),
 ): Question {
@@ -71,5 +76,7 @@ export function nextQuestion(
     distractors.push(k);
   }
 
-  return { target, choices: shuffle([target, ...distractors], rng) };
+  // Unique romaji also keeps pick-romaji questions to exactly one right answer.
+  const direction = mode === 'mixed' ? (rng() < 0.5 ? 'pick-kana' : 'pick-romaji') : mode;
+  return { target, choices: shuffle([target, ...distractors], rng), direction };
 }

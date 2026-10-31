@@ -21,13 +21,14 @@ export function createQuiz(root: HTMLElement, onAnswer: (kanaId: string) => void
       <span class="quiz-script"></span>
       <span class="quiz-worth"></span>
     </div>
-    <p class="quiz-label">Pick the kana for</p>
+    <p class="quiz-label"></p>
     <p class="quiz-prompt" lang="ja-Latn"></p>
     <div class="choices"></div>
     <p class="quiz-feedback" aria-live="polite"></p>
   `;
   const scriptEl = root.querySelector<HTMLElement>('.quiz-script')!;
   const worthEl = root.querySelector<HTMLElement>('.quiz-worth')!;
+  const labelEl = root.querySelector<HTMLElement>('.quiz-label')!;
   const promptEl = root.querySelector<HTMLElement>('.quiz-prompt')!;
   const choicesEl = root.querySelector<HTMLElement>('.choices')!;
   const feedbackEl = root.querySelector<HTMLElement>('.quiz-feedback')!;
@@ -52,14 +53,21 @@ export function createQuiz(root: HTMLElement, onAnswer: (kanaId: string) => void
       scriptEl.textContent = `${deck.name} ${deck.jpName}`;
       scriptEl.dataset.script = deck.id;
       setWorth(reward, detail);
-      promptEl.textContent = question.target.romaji;
+      const pickKana = question.direction === 'pick-kana';
+      labelEl.textContent = pickKana ? 'Pick the kana for' : 'Pick the romaji for';
+      promptEl.textContent = pickKana ? question.target.romaji : question.target.kana;
+      promptEl.lang = pickKana ? 'ja-Latn' : 'ja';
       feedbackEl.textContent = '';
       feedbackEl.className = 'quiz-feedback';
       choicesEl.innerHTML = question.choices
         .map(
           (k, i) => `
           <button type="button" class="choice" data-id="${k.id}">
-            <kbd>${KEYS[i]}</kbd><span class="choice-kana" lang="ja">${k.kana}</span>
+            <kbd>${KEYS[i]}</kbd>${
+              pickKana
+                ? `<span class="choice-kana" lang="ja">${k.kana}</span>`
+                : `<span class="choice-romaji" lang="ja-Latn">${k.romaji}</span>`
+            }
           </button>`,
         )
         .join('');

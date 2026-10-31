@@ -2,7 +2,7 @@ import { deckFor } from '../data/decks';
 import { ALL_KANA, countRows, GROUPS, groupKey, type Script } from '../data/kana';
 import { LESSONS } from '../data/lessons';
 import { rowBonus } from '../game/scoring';
-import type { GameState } from '../game/state';
+import type { GameState, QuizMode } from '../game/state';
 
 export interface LessonsView {
   /** Refreshes mastery bars and counts without rebuilding the panel. */
@@ -20,6 +20,8 @@ export interface LessonsView {
 export interface LessonsActions {
   /** Fires after the enabled rows change; the panel edits `state` directly. */
   onChange(): void;
+  /** Fires after `state.quizMode` changes. */
+  onQuizMode(): void;
   onLearn(script: Script): void;
 }
 
@@ -56,10 +58,17 @@ export function createLessons(
       <button type="button" class="btn btn-small lessons-close" aria-label="Close lessons">Close</button>
     </header>
     <p class="lessons-hint" aria-live="polite"></p>
+    <div class="quiz-mode" role="group" aria-label="Quiz direction">
+      <span class="quiz-mode-label">Quiz</span>
+      <button type="button" class="btn btn-small" data-mode="pick-kana" title="See the romaji, pick the kana">a → <span lang="ja">あ</span></button>
+      <button type="button" class="btn btn-small" data-mode="pick-romaji" title="See the kana, pick the romaji"><span lang="ja">あ</span> → a</button>
+      <button type="button" class="btn btn-small" data-mode="mixed" title="A random mix of both">Mixed</button>
+    </div>
     <div class="lesson-list"></div>
   `;
   const bonusEl = root.querySelector<HTMLElement>('.lessons-bonus')!;
   const hintEl = root.querySelector<HTMLElement>('.lessons-hint')!;
+  const modeEl = root.querySelector<HTMLElement>('.quiz-mode')!;
   const list = root.querySelector<HTMLElement>('.lesson-list')!;
   const firstScript = state.enabledGroups[0]?.split(':')[0];
   let selected: Script = firstScript === 'katakana' ? 'katakana' : 'hiragana';
@@ -118,6 +127,9 @@ export function createLessons(
   function update(): void {
     const rows = countRows(state.enabledGroups);
     bonusEl.textContent = `Row bonus ×${Number(rowBonus(rows).toFixed(2))} · ${rows} ${rows === 1 ? 'row' : 'rows'}`;
+    for (const btn of modeEl.querySelectorAll<HTMLButtonElement>('[data-mode]')) {
+      btn.setAttribute('aria-pressed', String(btn.dataset.mode === state.quizMode));
+    }
     for (const el of list.querySelectorAll<HTMLElement>('[data-lesson]')) {
       const script = el.dataset.lesson as Script;
       const on = rowsOn(state, script);
@@ -169,6 +181,14 @@ export function createLessons(
       const others = state.enabledGroups.filter((k) => !keys.includes(k));
       setGroups(btn.dataset.all ? [...others, ...keys] : others);
     }
+  });
+
+  modeEl.addEventListener('click', (e) => {
+    const mode = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-mode]')?.dataset.mode as QuizMode | undefined;
+    if (!mode || mode === state.quizMode) return;
+    state.quizMode = mode;
+    update();
+    actions.onQuizMode();
   });
 
   const setOpen = (open: boolean) => {

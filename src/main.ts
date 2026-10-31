@@ -58,6 +58,10 @@ const lessons = createLessons($('.lessons'), $('.lessons-backdrop'), state, {
     if (question && kanaInGroups(state.enabledGroups).some((k) => k.id === question!.target.id)) updateShownReward();
     else ask();
   },
+  onQuizMode: () => {
+    persist();
+    if (!answering) ask();
+  },
   onLearn: (script) => study.open(script),
 });
 const study = createStudy($('.study-backdrop'), state, (key) => lessons.enableRow(key));
@@ -90,7 +94,7 @@ function updateShownReward(): void {
 function ask(): void {
   answering = false;
   const pool = kanaInGroups(state.enabledGroups);
-  question = nextQuestion(pool, state.stats, question?.target.id ?? null);
+  question = nextQuestion(pool, state.stats, question?.target.id ?? null, state.quizMode);
   quiz.show(question, ...shownReward(question));
 }
 

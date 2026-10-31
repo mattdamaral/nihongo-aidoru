@@ -9,6 +9,10 @@ export interface KanaStat {
   lastSeen: number;
 }
 
+/** What the quiz shows: romaji to pick the kana, kana to pick the romaji, or either at random. */
+export type QuizMode = 'pick-kana' | 'pick-romaji' | 'mixed';
+export const QUIZ_MODES: readonly QuizMode[] = ['pick-kana', 'pick-romaji', 'mixed'];
+
 export interface GameState {
   version: 2;
   sushi: number;
@@ -18,6 +22,7 @@ export interface GameState {
   /** Group keys like "hiragana:ka". */
   enabledGroups: string[];
   stats: Record<string, KanaStat>;
+  quizMode: QuizMode;
   /** Tool id → number owned. */
   tools: Record<string, number>;
   /** Tool id → seconds into the current production cycle. */
@@ -40,6 +45,7 @@ export function defaultState(now = Date.now()): GameState {
     bestStreak: 0,
     enabledGroups: [groupKey('hiragana', 'a'), groupKey('hiragana', 'ka')],
     stats: {},
+    quizMode: 'pick-kana',
     tools: {},
     toolProgress: {},
     lastTick: now,
@@ -90,6 +96,8 @@ export function parseState(raw: unknown): GameState | null {
     bestStreak: isNum(r.bestStreak) ? r.bestStreak : 0,
     enabledGroups: groups.length > 0 ? groups : fresh.enabledGroups,
     stats,
+    // Saves from before quiz modes default to the original direction.
+    quizMode: QUIZ_MODES.includes(r.quizMode as QuizMode) ? (r.quizMode as QuizMode) : fresh.quizMode,
     // v1 saves have no tools; these default to empty.
     tools: toolRecord(r.tools, true),
     toolProgress: toolRecord(r.toolProgress, false),

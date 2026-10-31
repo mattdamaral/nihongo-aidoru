@@ -294,6 +294,11 @@ kbd {
   text-shadow: 3px 3px 0 var(--shadow);
 }
 
+.quiz-prompt[lang='ja'] {
+  font-family: var(--font-jp);
+  font-weight: 500;
+}
+
 .choices {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -335,6 +340,11 @@ kbd {
   font-family: var(--font-jp);
   font-weight: 500;
   font-size: 42px;
+  line-height: 1;
+}
+
+.choice-romaji {
+  font-size: 32px;
   line-height: 1;
 }
 
@@ -539,6 +549,24 @@ kbd {
 
 .lessons-hint.is-bad {
   color: var(--danger);
+}
+
+.quiz-mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.quiz-mode-label {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.quiz-mode [aria-pressed='true'] {
+  border-color: var(--gold);
+  color: var(--gold);
 }
 
 .lesson-list {

@@ -35,7 +35,7 @@ describe('nextQuestion', () => {
       const rng = seeded(42);
       let prev: string | null = null;
       for (let i = 0; i < RUNS; i++) {
-        const q = nextQuestion(pool, {}, prev, rng);
+        const q = nextQuestion(pool, {}, prev, 'pick-kana', rng);
         expect(q.choices).toHaveLength(4);
         expect(new Set(q.choices.map((k) => k.id)).size).toBe(4);
         expect(q.choices).toContain(q.target);
@@ -56,9 +56,18 @@ describe('nextQuestion', () => {
     for (const k of pool.slice(1)) stats[k.id] = { right: 10, wrong: 0, lastSeen: Date.now() };
     const rng = seeded(7);
     let hits = 0;
-    for (let i = 0; i < RUNS; i++) if (nextQuestion(pool, stats, null, rng).target.id === missed.id) hits++;
+    for (let i = 0; i < RUNS; i++) if (nextQuestion(pool, stats, null, 'pick-kana', rng).target.id === missed.id) hits++;
     // Uniform would be 1/10 of runs.
     expect(hits).toBeGreaterThan(RUNS / 5);
+  });
+
+  it('follows the quiz mode, mixing both directions in mixed mode', () => {
+    const rng = seeded(3);
+    expect(nextQuestion(pools.starter, {}, null).direction).toBe('pick-kana');
+    expect(nextQuestion(pools.starter, {}, null, 'pick-romaji', rng).direction).toBe('pick-romaji');
+    const directions = new Set<string>();
+    for (let i = 0; i < 50; i++) directions.add(nextQuestion(pools.starter, {}, null, 'mixed', rng).direction);
+    expect(directions).toEqual(new Set(['pick-kana', 'pick-romaji']));
   });
 
   it('rejects an empty pool', () => {

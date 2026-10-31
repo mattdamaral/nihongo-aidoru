@@ -21,6 +21,7 @@ describe('save / load', () => {
     state.stats['katakana:サ'] = { right: 2, wrong: 1, lastSeen: 123 };
     state.tools = { shamoji: 3, hangiri: 1 };
     state.toolProgress = { shamoji: 4.5 };
+    state.quizMode = 'mixed';
     save(storage, state);
     expect(load(storage)).toEqual(state);
   });
@@ -67,9 +68,11 @@ describe('save / load', () => {
           enabledGroups: [],
           stats: { good: { right: 1, wrong: 0, lastSeen: 5 }, bad: { right: 'x' } },
           tools: { shamoji: 2.7, unknownTool: 5, makisu: -1 },
+          quizMode: 'sideways',
         }),
       ),
     );
+    expect(loaded.quizMode).toBe('pick-kana');
     expect(loaded.sushi).toBe(0);
     expect(loaded.totalEarned).toBe(10);
     expect(loaded.enabledGroups.length).toBeGreaterThan(0);
