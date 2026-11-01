@@ -115,12 +115,12 @@ const menu = createMenu($('.menu-backdrop'), state, sound, {
   },
   onGuide: () => guide.open(),
   onKeys: () => keys.open(),
-  onDev: (action) => {
+  onDev: (action, amount = 0) => {
     if (action === 'unlock') {
       state.unlocked = [...DECK_IDS];
       lessons.rebuild();
     } else if (action === 'sushi') {
-      earn(state, 10_000);
+      earn(state, amount);
     } else {
       Object.assign(state, defaultState());
       for (const key of ['guide-seen', 'seen-update']) localStorage.removeItem(`${STORAGE_PREFIX}:${key}`);

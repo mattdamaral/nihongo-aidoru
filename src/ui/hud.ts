@@ -67,6 +67,7 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
   `;
 
   const value = topbar.querySelector<HTMLElement>('.counter-value')!;
+  const counterIcon = topbar.querySelector<SVGElement>('.counter-icon')!;
   const rate = topbar.querySelector<HTMLElement>('.counter-rate')!;
   const streakEl = topbar.querySelector<HTMLElement>('.streak')!;
   const streakValue = topbar.querySelector<HTMLElement>('.streak-value')!;
@@ -109,6 +110,7 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
     celebrate(reward) {
       replay(sushi, 'bounce');
       replay(value, 'pulse');
+      replay(counterIcon, 'grow');
       const pop = document.createElement('span');
       pop.className = 'popup';
       pop.textContent = formatReward(reward);

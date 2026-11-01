@@ -120,19 +120,19 @@ export function createLessons(
       }
       if (!isUnlocked(state, lesson.deck)) {
         const p = unlockProgress(state, lesson.deck)!;
+        // A card, not a button: only its Learn button does anything until it opens.
         return `
-        <div class="lesson-locked">
-          <button type="button" class="lesson is-locked" data-locked="${lesson.deck}">
+          <div class="lesson is-locked" data-locked="${lesson.deck}"
+            title="Each correct answer in ${deckFor(p.from).name} is a mastery point, up to 5 per card. You can already study it in Learn.">
             <span class="lesson-jp" lang="ja">${lesson.jpName}</span>
             <span class="lesson-name">${lesson.name}</span>
             <span class="lesson-meta">Locked</span>
+            <button type="button" class="btn btn-small learn-btn" data-learn="${lesson.deck}">Learn</button>
             <span class="lesson-lock">
               <span class="lesson-lock-text">Master ${deckFor(p.from).name}: ${Math.min(p.have, p.need)} / ${p.need}</span>
               <span class="chip-bar"><span style="width: ${Math.min(p.have / p.need, 1) * 100}%"></span></span>
             </span>
-          </button>
-          <button type="button" class="btn btn-small learn-btn" data-learn="${lesson.deck}">Learn</button>
-        </div>`;
+          </div>`;
       }
       const open = lesson.deck === state.activeDeck;
       return `
@@ -203,12 +203,7 @@ export function createLessons(
   list.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
     if (!btn) return;
-    if (btn.dataset.locked) {
-      const p = unlockProgress(state, btn.dataset.locked as DeckId)!;
-      hintEl.textContent =
-        `${deckFor(btn.dataset.locked as DeckId).name} opens at ${p.need} mastery points in ${deckFor(p.from).name} ` +
-        `(you have ${Math.min(p.have, p.need)}). Each correct answer is a point, up to 5 per card. You can already study it in Learn.`;
-    } else if (btn.dataset.lesson) {
+    if (btn.dataset.lesson) {
       play(btn.dataset.lesson as DeckId);
     } else if (btn.dataset.learn) {
       actions.onLearn(btn.dataset.learn as DeckId);

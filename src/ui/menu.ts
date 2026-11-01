@@ -16,8 +16,8 @@ export interface MenuActions {
   onLoad(incoming: GameState): void;
   onGuide(): void;
   onKeys(): void;
-  /** Dev build only: testing shortcuts. */
-  onDev(action: DevAction): void;
+  /** Dev build only: testing shortcuts. `amount` is the sushi to add, for 'sushi'. */
+  onDev(action: DevAction, amount?: number): void;
 }
 
 /** The ideas page sits next to the game, at the same base path (so the dev site links to its own copy). */
@@ -79,8 +79,12 @@ export function createMenu(root: HTMLElement, state: GameState, sound: Sound, ac
         <p class="sheet-hint">Only on the dev site, for testing. They change the dev save only.</p>
         <div class="menu-row menu-links">
           <button type="button" class="btn" data-dev="unlock">Unlock all lessons</button>
-          <button type="button" class="btn" data-dev="sushi">+10K sushi</button>
+          <button type="button" class="btn" data-dev="sushi" data-amount="1000000">+1M sushi</button>
           <button type="button" class="btn btn-danger" data-dev="reset">Reset dev save</button>
+        </div>
+        <div class="menu-row dev-amount-row">
+          <input type="number" class="code dev-amount" min="1" step="1" inputmode="numeric" placeholder="Amount" aria-label="Sushi to add" />
+          <button type="button" class="btn" data-dev="sushi">Add sushi</button>
         </div>
       </section>`
           : ''
@@ -179,11 +183,24 @@ export function createMenu(root: HTMLElement, state: GameState, sound: Sound, ac
     actions.onKeys();
   });
   root.addEventListener('click', (e) => {
-    const action = (e.target as HTMLElement).closest<HTMLElement>('[data-dev]')?.dataset.dev as DevAction | undefined;
-    if (action) actions.onDev(action);
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-dev]');
+    const action = btn?.dataset.dev as DevAction | undefined;
+    if (!action) return;
+    if (action !== 'sushi') return actions.onDev(action);
+    // Preset buttons carry their amount; "Add sushi" reads the box.
+    const field = root.querySelector<HTMLInputElement>('.dev-amount')!;
+    const amount = Math.floor(Number(btn!.dataset.amount ?? field.value));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      field.focus();
+      return;
+    }
+    actions.onDev(action, amount);
   });
   root.addEventListener('click', (e) => {
     if (e.target === root) close();
+  });
+  root.querySelector('.dev-amount')?.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter') root.querySelector<HTMLElement>('.dev-amount-row [data-dev]')!.click();
   });
 
   return {
