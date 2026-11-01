@@ -61,7 +61,8 @@ export function createLessons(
       <span class="quiz-mode-label">Quiz</span>
       <button type="button" class="btn btn-small" data-mode="pick-kana" title="See the romaji, number or meaning; pick the Japanese">a → <span lang="ja">あ</span></button>
       <button type="button" class="btn btn-small" data-mode="pick-romaji" title="See the Japanese; pick the romaji, number or meaning"><span lang="ja">あ</span> → a</button>
-      <button type="button" class="btn btn-small" data-mode="mixed" title="A random mix of both">Mixed</button>
+      <button type="button" class="btn btn-small" data-mode="listen" title="Hear the Japanese; pick the kana, number or meaning">Listen</button>
+      <button type="button" class="btn btn-small" data-mode="mixed" title="A random mix of a → あ and あ → a">Mixed</button>
     </div>
     <div class="quiz-mode writing" role="group" aria-label="Writing">
       <span class="quiz-mode-label">Writing</span>

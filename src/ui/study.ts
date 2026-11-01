@@ -5,12 +5,15 @@ import { mnemonicFor } from '../data/mnemonics';
 import type { GameState } from '../game/state';
 import { isUnlocked, MASTERY_TARGET, unlockProgress } from '../game/progress';
 import { sizeClass } from './quiz';
+import { speakButton, type Voice } from './voice';
 
 export interface StudyView {
   open(deck: DeckId): void;
   close(): void;
   prev(): void;
   next(): void;
+  /** Says the card on screen again (R key). */
+  speak(): void;
   readonly isOpen: boolean;
 }
 
@@ -28,7 +31,7 @@ type View =
  * with mnemonics or notes, and a guided walkthrough of one row that ends by
  * offering to add it to practice.
  */
-export function createStudy(root: HTMLElement, state: GameState, onPractice: (key: string) => void): StudyView {
+export function createStudy(root: HTMLElement, state: GameState, voice: Voice, onPractice: (key: string) => void): StudyView {
   root.innerHTML = `
     <div class="sheet study" role="dialog" aria-modal="true" aria-labelledby="study-title">
       <header class="sheet-head">
@@ -123,6 +126,7 @@ export function createStudy(root: HTMLElement, state: GameState, onPractice: (ke
       <div class="study-card" data-script="${deckId}">
         <p class="study-where">${row ? `Studying ${rowName(row)}` : label(c.group)} · ${index + 1} / ${list.length}</p>
         <div class="study-big${sizeClass(jp(c))}" lang="ja">${jp(c)}</div>
+        ${speakButton('study-speak')}
         <p class="study-romaji">${reading(c)}</p>
         ${meaning}
         <ul class="study-tips">${m.tips.map((t) => `<li>${t}</li>`).join('')}</ul>
@@ -158,6 +162,13 @@ export function createStudy(root: HTMLElement, state: GameState, onPractice: (ke
       </div>`;
   }
 
+  const shownCard = () => (view.kind === 'card' ? sequence(view.row)[view.index] : undefined);
+
+  function speak(): void {
+    const c = shownCard();
+    if (c) void voice.play(c);
+  }
+
   function render(): void {
     const deck = deckFor(deckId);
     sheet.dataset.script = deckId;
@@ -165,6 +176,8 @@ export function createStudy(root: HTMLElement, state: GameState, onPractice: (ke
     body.innerHTML = view.kind === 'chart' ? chart() : view.kind === 'card' ? card(view.index, view.row) : done(view.row);
     body.scrollTop = 0;
     body.querySelector<HTMLElement>('[data-nav="next"], [data-practice]')?.focus({ preventScroll: true });
+    // Every card is said as it opens: tapping a kana in the chart plays it.
+    speak();
   }
 
   function move(step: 1 | -1): void {
@@ -184,6 +197,7 @@ export function createStudy(root: HTMLElement, state: GameState, onPractice: (ke
   body.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
     if (!btn) return;
+    if (btn.hasAttribute('data-speak')) return speak();
     if (btn.dataset.card) {
       view = { kind: 'card', index: deckCards().findIndex((c) => c.id === btn.dataset.card), row: null };
     } else if (btn.dataset.studyRow) {
@@ -200,6 +214,7 @@ export function createStudy(root: HTMLElement, state: GameState, onPractice: (ke
   });
 
   function close(): void {
+    voice.stop();
     isOpen = false;
     root.classList.remove('is-open');
   }
@@ -220,6 +235,7 @@ export function createStudy(root: HTMLElement, state: GameState, onPractice: (ke
     close,
     prev: () => move(-1),
     next: () => move(1),
+    speak,
     get isOpen() {
       return isOpen;
     },

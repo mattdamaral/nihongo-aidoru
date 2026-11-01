@@ -3,7 +3,7 @@ import { isScript } from '../data/kana';
 import { mnemonicFor } from '../data/mnemonics';
 import type { CardStat, QuizMode } from './state';
 
-/** The direction of a single question; "mixed" mode picks one per question. */
+/** The direction of a single question; "mixed" mode picks one of the two reading directions per question. */
 export type Direction = Exclude<QuizMode, 'mixed'>;
 
 export interface Question {

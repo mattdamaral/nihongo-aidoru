@@ -687,6 +687,7 @@ kbd {
 
 .quiz-mode {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   margin-bottom: 10px;
@@ -1644,6 +1645,95 @@ kbd {
   margin-right: 6px;
   color: var(--muted);
   font-size: 11px;
+}
+
+/* ---------- Voice ---------- */
+
+.speak {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--panel-2);
+  border: var(--px) solid var(--border);
+  box-shadow: 3px 3px 0 var(--shadow);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.speak:hover {
+  border-color: var(--gold);
+}
+
+.speak:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--shadow);
+}
+
+.speak:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.speak-icon {
+  width: 24px;
+  height: 20px;
+}
+
+/* The prompt stays centred; the speaker sits at its right edge. */
+.quiz-prompt-row {
+  position: relative;
+}
+
+.quiz-prompt-row .quiz-prompt {
+  padding-inline: 48px;
+}
+
+.quiz-speak {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+}
+
+.quiz-speak:active {
+  transform: translate(2px, calc(-50% + 2px));
+}
+
+.quiz-prompt.is-listen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  text-shadow: none;
+}
+
+.listen-play {
+  padding: 12px 22px;
+  border-color: var(--gold);
+  font-size: 18px;
+}
+
+.listen-play .speak-icon {
+  width: 36px;
+  height: 30px;
+}
+
+.listen-fallback {
+  color: var(--muted);
+  font-size: 28px;
+}
+
+.study-speak {
+  margin: 2px 0 8px;
+}
+
+.voice-label {
+  min-width: 9em;
 }
 
 /* ---------- Locked lessons ---------- */

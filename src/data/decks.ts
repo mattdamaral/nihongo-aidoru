@@ -22,7 +22,7 @@ const KANA_SECTIONS = [
   { groups: BASIC },
   { title: 'Dakuten <span lang="ja">゛゜</span>', groups: GROUPS.map((g) => g.id).filter((id) => !BASIC.includes(id)) },
 ];
-const KANA_LABELS = { 'pick-kana': 'Pick the kana for', 'pick-romaji': 'Pick the romaji for' };
+const KANA_LABELS = { 'pick-kana': 'Pick the kana for', 'pick-romaji': 'Pick the romaji for', listen: 'Pick the kana you hear' };
 
 const kanaGroups = (index: 1 | 2): CardGroup[] =>
   GROUPS.map((g) => ({ id: g.id, label: g.label, preview: g.rows.map((row) => row[index]).join('') }));
@@ -41,7 +41,7 @@ export const DECKS: Deck[] = [
       { groups: NUMBER_GROUPS.slice(0, 10).map((g) => g.id) },
       { title: 'Big numbers', groups: NUMBER_GROUPS.slice(10).map((g) => g.id) },
     ],
-    labels: { 'pick-kana': 'Pick the Japanese for', 'pick-romaji': 'Pick the number for' },
+    labels: { 'pick-kana': 'Pick the Japanese for', 'pick-romaji': 'Pick the number for', listen: 'Pick the number you hear' },
   },
   {
     id: 'greetings',
@@ -50,7 +50,7 @@ export const DECKS: Deck[] = [
     multiplier: 3,
     groups: GREETING_GROUPS,
     sections: [{ groups: GREETING_GROUPS.map((g) => g.id) }],
-    labels: { 'pick-kana': 'Pick the Japanese for', 'pick-romaji': 'Pick the meaning of' },
+    labels: { 'pick-kana': 'Pick the Japanese for', 'pick-romaji': 'Pick the meaning of', listen: 'Pick the meaning of what you hear' },
   },
 ];
 

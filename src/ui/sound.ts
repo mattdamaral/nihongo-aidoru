@@ -10,6 +10,8 @@ export interface SoundSettings {
   muted: boolean;
   /** 0–1 */
   volume: number;
+  /** 0 to 1, for the Japanese voice clips. */
+  voiceVolume: number;
 }
 
 export interface Sound {
@@ -44,15 +46,15 @@ const SOUNDS: Record<'correct' | 'wrong' | 'buy', Note[]> = {
   ],
 };
 
+const level = (value: unknown, fallback: number) =>
+  typeof value === 'number' && value >= 0 && value <= 1 ? value : fallback;
+
 function loadSettings(): SoundSettings {
   try {
     const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') as Partial<SoundSettings>;
-    return {
-      muted: raw.muted === true,
-      volume: typeof raw.volume === 'number' && raw.volume >= 0 && raw.volume <= 1 ? raw.volume : 0.7,
-    };
+    return { muted: raw.muted === true, volume: level(raw.volume, 0.7), voiceVolume: level(raw.voiceVolume, 0.8) };
   } catch {
-    return { muted: false, volume: 0.7 };
+    return { muted: false, volume: 0.7, voiceVolume: 0.8 };
   }
 }
 

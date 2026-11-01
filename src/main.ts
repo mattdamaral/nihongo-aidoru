@@ -1,5 +1,5 @@
 import './style.css';
-import { cardsInGroups, DECK_IDS } from './data/cards';
+import { ALL_CARDS, cardsInGroups, DECK_IDS } from './data/cards';
 import { deckFor } from './data/decks';
 import { AWAY_CAP_S, AWAY_THRESHOLD_S, buy, buyMax, catchUp, earn, passiveRate, rewardMods } from './game/economy';
 import { checkDailyGoal, checkUnlocks, countCorrect } from './game/progress';
@@ -19,6 +19,7 @@ import { createSound } from './ui/sound';
 import { createStamps, sealHtml } from './ui/stamps';
 import { createStats } from './ui/stats';
 import { createStudy } from './ui/study';
+import { createVoice } from './ui/voice';
 import { createToast } from './ui/toast';
 import { createWhatsNew } from './ui/whatsnew';
 
@@ -42,6 +43,7 @@ let question: Question | null = null;
 let answering = false;
 
 const sound = createSound();
+const voice = createVoice(sound);
 const hud = createHud($('.topbar'), $('.stage'), {
   onLessons: () => {
     shop.close();
@@ -62,7 +64,7 @@ const hud = createHud($('.topbar'), $('.stage'), {
 // Earlier updates aren't news to brand-new players.
 const whatsNew = createWhatsNew($('.whatsnew-backdrop'), firstVisit);
 hud.setUnseen(whatsNew.hasUnseen);
-const quiz = createQuiz($('.quiz'), state, answer);
+const quiz = createQuiz($('.quiz'), state, voice, answer);
 const shop = createShop($('.shop'), $('.shop-backdrop'), (tool, max) => {
   const bought = max ? buyMax(state, tool) : Number(buy(state, tool));
   if (!bought) return;
@@ -93,7 +95,7 @@ const lessons = createLessons($('.lessons'), $('.lessons-backdrop'), state, {
   },
   onLearn: (deck) => study.open(deck),
 });
-const study = createStudy($('.study-backdrop'), state, (key) => lessons.enableRow(key));
+const study = createStudy($('.study-backdrop'), state, voice, (key) => lessons.enableRow(key));
 const stats = createStats($('.stats-backdrop'), state, () => {
   // A lower goal may already be reached today.
   announce(checkDailyGoal(state, Date.now()) ? [goalReached(), ...progressNews()] : []);
@@ -116,6 +118,7 @@ const menu = createMenu($('.menu-backdrop'), state, sound, {
   },
   onGuide: () => guide.open(),
   onKeys: () => keys.open(),
+  onVoiceSample: () => void voice.play(ALL_CARDS.find((c) => c.id === 'greetings:こんにちは') ?? ALL_CARDS[0]!),
   onDev: (action, amount = 0) => {
     if (action === 'unlock') {
       state.unlocked = [...DECK_IDS];
@@ -258,6 +261,7 @@ document.addEventListener('keydown', (e) => {
     if (key === 'escape') study.close();
     else if (key === 'arrowleft') study.prev();
     else if (key === 'arrowright') study.next();
+    else if (key === 'r') study.speak();
     return;
   }
   const open = sheets.find((s) => s.isOpen);
@@ -280,8 +284,11 @@ document.addEventListener('keydown', (e) => {
     stamps.open();
   } else if (key === '?') {
     keys.open();
+  } else if (key === 'r') {
+    quiz.speak();
   } else if (key === 'm') {
     sound.set({ muted: !sound.settings.muted });
+    if (sound.settings.muted) voice.stop();
     toast.show(sound.settings.muted ? 'Sound off' : 'Sound on', 1200);
   } else if (quiz.inIntro && (key === 'enter' || key === ' ')) {
     // Stops the browser from also pressing whatever button gets focus next.

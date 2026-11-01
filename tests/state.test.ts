@@ -29,7 +29,7 @@ describe('save / load', () => {
     state.stats['katakana:サ'] = { right: 2, wrong: 1, lastSeen: 123, lastWrong: true };
     state.tools = { shamoji: 3, hangiri: 1 };
     state.toolProgress = { shamoji: 4.5 };
-    state.quizMode = 'mixed';
+    state.quizMode = 'listen';
     state.useKanji = true;
     save(storage, state);
     expect(load(storage)).toEqual(state);

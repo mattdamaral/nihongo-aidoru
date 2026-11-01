@@ -1,0 +1,2 @@
+Voice clips: VOICEVOX:玄野武宏 (ノーマル)
+Made with VOICEVOX, https://voicevox.hiroshiba.jp/ — see scripts/make-voice.ts.

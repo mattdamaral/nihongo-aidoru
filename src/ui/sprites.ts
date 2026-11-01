@@ -305,3 +305,24 @@ export function spriteSvg(sprite: Sprite, className = ''): string {
     `shape-rendering="crispEdges" class="${className}" aria-hidden="true">${rects.join('')}</svg>`
   );
 }
+
+// ---------- Interface icons ----------
+
+/** The speaker on "hear it" buttons. */
+export const SPEAKER: Sprite = {
+  palette: { s: '#f4efe4', w: '#ffd166' },
+  grid: [
+    '............',
+    '.....s......',
+    '....ss...w..',
+    '...sss....w.',
+    'ssssss..w..w',
+    'ssssss...w.w',
+    'ssssss...w.w',
+    'ssssss..w..w',
+    '...sss....w.',
+    '....ss...w..',
+    '.....s......',
+    '............',
+  ],
+};

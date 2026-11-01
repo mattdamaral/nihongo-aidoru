@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "balance": "vitest run tests/balance.test.ts --silent=false",
-    "icons": "node scripts/make-icons.ts"
+    "icons": "node scripts/make-icons.ts",
+    "voice": "node scripts/make-voice.ts"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

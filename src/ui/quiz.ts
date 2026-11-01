@@ -5,6 +5,7 @@ import { mnemonicFor } from '../data/mnemonics';
 import type { Question } from '../game/quiz';
 import { formatReward } from '../game/scoring';
 import type { GameState } from '../game/state';
+import { speakButton, type SpeakResult, type Voice } from './voice';
 
 /** Extra class that shrinks long text (greetings, big numbers) so it fits. */
 export const sizeClass = (text: string) => (text.length > 9 ? ' is-longer' : text.length > 4 ? ' is-long' : '');
@@ -33,6 +34,7 @@ function intro(c: Card, useKanji: boolean): string {
     <div class="intro">
       <p class="intro-tag">New!</p>
       <div class="intro-big${sizeClass(shown)}" lang="ja">${shown}</div>
+      ${speakButton('intro-speak')}
       <p class="intro-reading">${reading}</p>
       ${c.answer !== c.romaji ? `<p class="intro-answer">${c.answer}</p>` : ''}
       ${m.tips[0] ? `<p class="intro-tip">${m.tips[0]}</p>` : ''}
@@ -54,11 +56,13 @@ export interface QuizView {
   choose(index: number): void;
   /** Updates the "+X sushi" label, e.g. after buying a tool. */
   updateReward(reward: number, detail: string): void;
+  /** Plays the card's sound, unless that would give the answer away (R key). */
+  speak(): void;
 }
 
 const KEYS = ['1', '2', '3', '4'];
 
-export function createQuiz(root: HTMLElement, state: GameState, onAnswer: (cardId: string) => void): QuizView {
+export function createQuiz(root: HTMLElement, state: GameState, voice: Voice, onAnswer: (cardId: string) => void): QuizView {
   root.innerHTML = `
     <div class="quiz-intro" hidden></div>
     <div class="quiz-head">
@@ -66,7 +70,10 @@ export function createQuiz(root: HTMLElement, state: GameState, onAnswer: (cardI
       <span class="quiz-worth"></span>
     </div>
     <p class="quiz-label"></p>
-    <p class="quiz-prompt" lang="ja-Latn"></p>
+    <div class="quiz-prompt-row">
+      <p class="quiz-prompt" lang="ja-Latn"></p>
+      ${speakButton('quiz-speak')}
+    </div>
     <div class="choices"></div>
     <p class="quiz-feedback" aria-live="polite"></p>
   `;
@@ -74,6 +81,7 @@ export function createQuiz(root: HTMLElement, state: GameState, onAnswer: (cardI
   const worthEl = root.querySelector<HTMLElement>('.quiz-worth')!;
   const labelEl = root.querySelector<HTMLElement>('.quiz-label')!;
   const promptEl = root.querySelector<HTMLElement>('.quiz-prompt')!;
+  const speakEl = root.querySelector<HTMLElement>('.quiz-speak')!;
   const choicesEl = root.querySelector<HTMLElement>('.choices')!;
   const feedbackEl = root.querySelector<HTMLElement>('.quiz-feedback')!;
   const introEl = root.querySelector<HTMLElement>('.quiz-intro')!;
@@ -93,6 +101,7 @@ export function createQuiz(root: HTMLElement, state: GameState, onAnswer: (cardI
     if (current) current.isNew = false;
     setIntro(false);
     choicesEl.querySelector<HTMLElement>('.choice')?.focus({ preventScroll: true });
+    if (current?.direction === 'listen') speak();
   }
 
   let current: Question | null = null;
@@ -101,6 +110,30 @@ export function createQuiz(root: HTMLElement, state: GameState, onAnswer: (cardI
     worthEl.textContent = `${formatReward(reward)} sushi`;
     worthEl.title = detail;
   };
+
+  /** Hearing the Japanese before answering an "a → あ" question would give it away. */
+  const canSpeak = () => !!current && (inIntro || locked || current.direction !== 'pick-kana');
+
+  function speak(): void {
+    const question = current;
+    if (!question || !canSpeak()) return;
+    void voice.play(question.target).then((result) => {
+      if (question === current && question.direction === 'listen') listenState(result);
+    });
+  }
+
+  /** The listening prompt's button text, and the written reading if the sound can't play. */
+  function listenState(result: SpeakResult): void {
+    const label = promptEl.querySelector<HTMLElement>('.speak-label');
+    const fallback = promptEl.querySelector<HTMLElement>('.listen-fallback');
+    if (!label || !fallback) return;
+    label.textContent = { played: 'Play again', blocked: 'Tap to listen', muted: 'Sound is off (M)', failed: 'Couldn’t play' }[result];
+    fallback.hidden = result === 'played' || result === 'blocked';
+  }
+
+  root.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('[data-speak]')) speak();
+  });
 
   choicesEl.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.choice');
@@ -116,13 +149,23 @@ export function createQuiz(root: HTMLElement, state: GameState, onAnswer: (cardI
       scriptEl.dataset.script = deck.id;
       setWorth(reward, detail);
       const pickKana = question.direction === 'pick-kana';
+      const listen = question.direction === 'listen';
+      // Listening to kana means picking the kana; numbers and greetings pick the number or meaning.
+      const choiceJapanese = pickKana || (listen && isScript(deck.id));
       const jp = (c: Card) => japanese(c, state.useKanji);
-      const prompt = pickKana ? question.target.answer : jp(question.target);
       labelEl.textContent = deck.labels[question.direction];
-      promptEl.textContent = prompt;
-      promptEl.className = `quiz-prompt${sizeClass(prompt)}`;
-      // Kana decks' answers are romaji; numbers and greetings answer in plain English.
-      promptEl.lang = pickKana ? (isScript(deck.id) ? 'ja-Latn' : 'en') : 'ja';
+      if (listen) {
+        promptEl.innerHTML = `${speakButton('listen-play', 'Listen')}<span class="listen-fallback" lang="ja-Latn" hidden>${question.target.romaji}</span>`;
+        promptEl.className = 'quiz-prompt is-listen';
+        promptEl.lang = 'en';
+      } else {
+        const prompt = pickKana ? question.target.answer : jp(question.target);
+        promptEl.textContent = prompt;
+        promptEl.className = `quiz-prompt${sizeClass(prompt)}`;
+        // Kana decks' answers are romaji; numbers and greetings answer in plain English.
+        promptEl.lang = pickKana ? (isScript(deck.id) ? 'ja-Latn' : 'en') : 'ja';
+      }
+      speakEl.hidden = question.direction !== 'pick-romaji';
       feedbackEl.textContent = '';
       feedbackEl.className = 'quiz-feedback';
       if (question.isNew) introEl.innerHTML = intro(question.target, state.useKanji);
@@ -132,19 +175,23 @@ export function createQuiz(root: HTMLElement, state: GameState, onAnswer: (cardI
           (c, i) => `
           <button type="button" class="choice" data-id="${c.id}">
             <kbd>${KEYS[i]}</kbd>${
-              pickKana
+              choiceJapanese
                 ? `<span class="choice-kana${sizeClass(jp(c))}" lang="ja">${jp(c)}</span>`
                 : `<span class="choice-romaji${sizeClass(c.answer)}">${c.answer}</span>`
             }
           </button>`,
         )
         .join('');
+      // New cards are said as they're introduced; listening questions as they're asked.
+      if (question.isNew || listen) speak();
     },
     reveal(chosenId, reward) {
       if (!current) return;
       locked = true;
       const target = current.target;
       const chosen = current.choices.find((k) => k.id === chosenId);
+      // Now it's answered, the sound can be heard whichever way it was asked.
+      speakEl.hidden = current.direction === 'listen';
       for (const btn of choicesEl.querySelectorAll<HTMLButtonElement>('.choice')) {
         btn.disabled = true;
         if (btn.dataset.id === target.id) btn.classList.add('is-correct');
@@ -170,5 +217,6 @@ export function createQuiz(root: HTMLElement, state: GameState, onAnswer: (cardI
     updateReward(reward, detail) {
       if (!locked) setWorth(reward, detail);
     },
+    speak,
   };
 }

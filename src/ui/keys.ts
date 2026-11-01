@@ -7,6 +7,7 @@ const GROUPS: [title: string, keys: [keys: string[], what: string][]][] = [
       [['1', '2', '3', '4'], 'Pick an answer'],
       [['A', 'S', 'D', 'F'], 'Pick an answer (home row)'],
       [['Enter'], '“Got it” on a new card'],
+      [['R'], 'Hear it again'],
     ],
   ],
   [
@@ -16,12 +17,18 @@ const GROUPS: [title: string, keys: [keys: string[], what: string][]][] = [
       [['B'], 'Kitchen shop'],
       [['T'], 'Stats'],
       [['H'], 'Stamps'],
-      [['M'], 'Sound on / off'],
+      [['M'], 'Sound and voice on / off'],
       [['?'], 'This list'],
       [['Esc'], 'Close'],
     ],
   ],
-  ['Learn mode', [[['←', '→'], 'Previous / next card']]],
+  [
+    'Learn mode',
+    [
+      [['←', '→'], 'Previous / next card'],
+      [['R'], 'Hear it again'],
+    ],
+  ],
 ];
 
 /** Keyboard shortcuts sheet, opened with "?" or from the menu. */

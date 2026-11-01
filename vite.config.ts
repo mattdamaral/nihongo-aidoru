@@ -35,7 +35,8 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+          // mp3: the voice clips (about 1 MB), so listening works offline too.
+          globPatterns: ['**/*.{js,css,html,svg,png,woff2,mp3}'],
           // The real site's service worker also covers /dev/; don't answer those pages with the real app.
           navigateFallbackDenylist: isDev ? [] : [/\/dev\//],
           runtimeCaching: [

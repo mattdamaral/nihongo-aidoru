@@ -2,6 +2,7 @@ import { exportCode, importCode, SaveCodeError } from '../game/savecode';
 import type { GameState } from '../game/state';
 import { formatSushi } from '../game/scoring';
 import { IS_DEV_BUILD } from '../game/storage';
+import { VOICE_CREDIT } from '../data/voice';
 import type { Sound } from './sound';
 
 export interface MenuView {
@@ -16,6 +17,8 @@ export interface MenuActions {
   onLoad(incoming: GameState): void;
   onGuide(): void;
   onKeys(): void;
+  /** Plays a short clip, to try the voice volume. */
+  onVoiceSample(): void;
   /** Dev build only: testing shortcuts. `amount` is the sushi to add, for 'sushi'. */
   onDev(action: DevAction, amount?: number): void;
 }
@@ -46,7 +49,11 @@ export function createMenu(root: HTMLElement, state: GameState, sound: Sound, ac
           <label class="toggle"><input type="checkbox" class="sound-on" /> Sound effects</label>
           <input type="range" class="sound-volume" min="0" max="100" step="5" aria-label="Volume" />
         </div>
-        <p class="sheet-hint">Press M to mute or unmute.</p>
+        <div class="menu-row sound-row">
+          <span class="voice-label">Japanese voice</span>
+          <input type="range" class="voice-volume" min="0" max="100" step="5" aria-label="Voice volume" />
+        </div>
+        <p class="sheet-hint">Press M to mute or unmute both. Voice: ${VOICE_CREDIT}.</p>
       </section>
       <section class="menu-section">
         <h3>Your save code</h3>
@@ -100,6 +107,7 @@ export function createMenu(root: HTMLElement, state: GameState, sound: Sound, ac
   const confirmBox = $('.menu-confirm');
   const soundOn = $<HTMLInputElement>('.sound-on');
   const volume = $<HTMLInputElement>('.sound-volume');
+  const voiceVolume = $<HTMLInputElement>('.voice-volume');
   let pending: GameState | null = null;
   let isOpen = false;
 
@@ -107,6 +115,8 @@ export function createMenu(root: HTMLElement, state: GameState, sound: Sound, ac
     soundOn.checked = !sound.settings.muted;
     volume.value = String(Math.round(sound.settings.volume * 100));
     volume.disabled = sound.settings.muted;
+    voiceVolume.value = String(Math.round(sound.settings.voiceVolume * 100));
+    voiceVolume.disabled = sound.settings.muted;
   };
   soundOn.addEventListener('change', () => {
     sound.set({ muted: !soundOn.checked });
@@ -116,6 +126,10 @@ export function createMenu(root: HTMLElement, state: GameState, sound: Sound, ac
   volume.addEventListener('change', () => {
     sound.set({ volume: Number(volume.value) / 100 });
     sound.correct();
+  });
+  voiceVolume.addEventListener('change', () => {
+    sound.set({ voiceVolume: Number(voiceVolume.value) / 100 });
+    actions.onVoiceSample();
   });
 
   const setStatus = (el: HTMLElement, text: string, bad = false) => {

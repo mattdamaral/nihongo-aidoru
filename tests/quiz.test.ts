@@ -6,7 +6,7 @@ import { LESSONS } from '../src/data/lessons';
 import { LOOK_ALIKE_AFTER, lookAlikes, MAX_SHAKY, nextQuestion } from '../src/game/quiz';
 import type { CardStat } from '../src/game/state';
 import { formatSushi, NO_MODS, rewardBreakdown, rewardFor, rowBonus, streakBonus } from '../src/game/scoring';
-import { CHOCHIN, DEBA, FLAME, HANGIRI, ITAMAE, KAITEN, MAKISU, NIGIRI, NOREN, SHAMOJI, UCHIWA, YANAGIBA } from '../src/ui/sprites';
+import { CHOCHIN, DEBA, FLAME, HANGIRI, ITAMAE, KAITEN, MAKISU, NIGIRI, NOREN, SHAMOJI, SPEAKER, UCHIWA, YANAGIBA } from '../src/ui/sprites';
 
 /** Small deterministic PRNG so failures are reproducible. */
 function seeded(seed: number) {
@@ -94,6 +94,10 @@ describe('nextQuestion', () => {
     const directions = new Set<string>();
     for (let i = 0; i < 50; i++) directions.add(nextQuestion(pools.starter, {}, null, 'mixed', rng).direction);
     expect(directions).toEqual(new Set(['pick-kana', 'pick-romaji']));
+  });
+
+  it('asks by sound in listen mode, which mixed mode leaves out', () => {
+    expect(nextQuestion(pools.starter, {}, null, 'listen', seeded(4)).direction).toBe('listen');
   });
 
   it('introduces new cards one at a time, in lesson order, while few cards are shaky', () => {
@@ -206,7 +210,7 @@ describe('scoring', () => {
 
 describe('sprites', () => {
   it('have rectangular grids with known colors', () => {
-    for (const sprite of [NIGIRI, FLAME, SHAMOJI, YANAGIBA, MAKISU, UCHIWA, HANGIRI, DEBA, NOREN, CHOCHIN, KAITEN, ITAMAE]) {
+    for (const sprite of [NIGIRI, FLAME, SHAMOJI, YANAGIBA, MAKISU, UCHIWA, HANGIRI, DEBA, NOREN, CHOCHIN, KAITEN, ITAMAE, SPEAKER]) {
       const width = sprite.grid[0]!.length;
       expect(sprite.grid).toHaveLength(width);
       for (const row of sprite.grid) {

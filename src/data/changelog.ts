@@ -10,6 +10,17 @@ export interface Update {
 /** Player-facing update notes, newest first. Add a new entry at the top for each release. */
 export const UPDATES: Update[] = [
   {
+    id: '2026-11-01-voice',
+    date: '2026-11-01',
+    title: 'Hear it: Japanese voice',
+    items: [
+      'Every kana, number and greeting is now spoken by a natural Japanese voice (VOICEVOX:玄野武宏).',
+      'Speaker buttons on questions, new-card intros and Learn cards; press R to hear it again.',
+      'New Listen quiz: hear the Japanese, then pick the kana, number or meaning.',
+      'Voice volume in the menu. The clips work offline too.',
+    ],
+  },
+  {
     id: '2026-11-01-stamps',
     date: '2026-11-01',
     title: 'Stamps, daily goals & more',

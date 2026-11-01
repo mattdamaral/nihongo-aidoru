@@ -18,13 +18,6 @@ export const AREAS: Record<IdeaArea, { title: string; jp: string }> = {
 /** Ideas being considered for future updates. When one ships, move it to the changelog. */
 export const IDEAS: Idea[] = [
   {
-    id: 'audio',
-    area: 'learning',
-    title: 'Hear it spoken',
-    text: 'A speaker button on questions and Learn cards, and an option to read every question aloud, using your device’s Japanese voice.',
-    when: 'next',
-  },
-  {
     id: 'typing',
     area: 'learning',
     title: 'Typing mode',

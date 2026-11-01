@@ -11,9 +11,9 @@ export interface CardStat {
   lastWrong: boolean;
 }
 
-/** What the quiz shows: romaji to pick the kana, kana to pick the romaji, or either at random. */
-export type QuizMode = 'pick-kana' | 'pick-romaji' | 'mixed';
-export const QUIZ_MODES: readonly QuizMode[] = ['pick-kana', 'pick-romaji', 'mixed'];
+/** What the quiz shows: romaji to pick the kana, kana to pick the romaji, a sound to pick what you heard, or either reading direction at random. */
+export type QuizMode = 'pick-kana' | 'pick-romaji' | 'listen' | 'mixed';
+export const QUIZ_MODES: readonly QuizMode[] = ['pick-kana', 'pick-romaji', 'listen', 'mixed'];
 
 export interface GameState {
   version: 2;
