@@ -174,6 +174,116 @@ export const HANGIRI: Sprite = {
   ],
 };
 
+export const DEBA: Sprite = {
+  palette: { k: OUTLINE, s: '#d5dcea', S: '#8f9bb3', h: '#ffffff', w: '#b5763a', W: '#7a4a22', g: '#e8c88a' },
+  grid: [
+    '................',
+    '................',
+    '..kkkkkkkk......',
+    '.khsssssssk.....',
+    '.ksssssssssk....',
+    '.kssssssssssk...',
+    '.kSSSSSSSSSSSk..',
+    '..kkkkkkkkkkgkk.',
+    '............kwwk',
+    '............kwWk',
+    '............kwWk',
+    '............kwWk',
+    '............kwWk',
+    '............kkkk',
+    '................',
+    '................',
+  ],
+};
+
+export const NOREN: Sprite = {
+  palette: { k: OUTLINE, b: '#2b4a8a', B: '#1f3566', w: '#f4efe4', p: '#8a5a2b' },
+  grid: [
+    '................',
+    'kkkkkkkkkkkkkkkk',
+    'kppppppppppppppk',
+    'kkkkkkkkkkkkkkkk',
+    '.kbbbbk..kbbbbk.',
+    '.kbbbbk..kbbbbk.',
+    '.kbwwbk..kbwwbk.',
+    '.kbwwbk..kbwwbk.',
+    '.kbbbbk..kbbbbk.',
+    '.kbbbbk..kbbbbk.',
+    '.kBbbbk..kbbbBk.',
+    '.kBBbbk..kbbBBk.',
+    '.kBBBbk..kbBBBk.',
+    '.kkkkkk..kkkkkk.',
+    '................',
+    '................',
+  ],
+};
+
+export const CHOCHIN: Sprite = {
+  palette: { k: OUTLINE, r: '#e63946', R: '#a8222f', y: '#ffd166', d: '#3a2a2a' },
+  grid: [
+    '.......kk.......',
+    '......kddk......',
+    '....kkkkkkkk....',
+    '...krrrrrrrrk...',
+    '..krrRrrrrRrrk..',
+    '..kRRRRRRRRRRk..',
+    '.krrrryyyyrrrrk.',
+    '.krrrryrryrrrrk.',
+    '.kRRRRyyyyRRRRk.',
+    '.krrrryrryrrrrk.',
+    '..kRRRRRRRRRRk..',
+    '..krrRrrrrRrrk..',
+    '...krrrrrrrrk...',
+    '....kkkkkkkk....',
+    '......kddk......',
+    '.......kk.......',
+  ],
+};
+
+export const KAITEN: Sprite = {
+  palette: { k: OUTLINE, g: '#5f5878', G: '#3d3560', p: '#f4efe4', o: '#ff8a5c', r: '#f4efe4', b: '#7cc6ff' },
+  grid: [
+    '................',
+    '................',
+    '................',
+    '...koook.kbbk...',
+    '..krrrrk.krrk...',
+    '.kppppppkppppk..',
+    'kkkkkkkkkkkkkkkk',
+    'kggggggggggggggk',
+    'kGgGgGgGgGgGgGgk',
+    'kggggggggggggggk',
+    'kkkkkkkkkkkkkkkk',
+    '.kGk........kGk.',
+    '.kGk........kGk.',
+    '.kkk........kkk.',
+    '................',
+    '................',
+  ],
+};
+
+export const ITAMAE: Sprite = {
+  palette: { k: OUTLINE, w: '#f4efe4', W: '#d9d0c0', s: '#f2c39b', S: '#d99f78', r: '#e63946', e: '#1a1020' },
+  grid: [
+    '....kkkkkkkk....',
+    '...kwwwwwwwwk...',
+    '..kwwwwwwwwwwk..',
+    '..kwwwwwwwwwWk..',
+    '..krrrrrrrrrrkk.',
+    '..kssssssssssrk.',
+    '..ksseessseesk..',
+    '..kssssssssssk..',
+    '..ksssssSsssSk..',
+    '..kssskkkksssk..',
+    '...kssssssssk...',
+    '....kkkkkkkk....',
+    '..kkwwwwwwwwkk..',
+    '.kwwwwwrrwwwwwk.',
+    '.kwwwwwrrwwwwWk.',
+    '.kkkkkkkkkkkkkk.',
+  ],
+};
+
 /** Renders a sprite as an SVG string, merging horizontal runs of one color into a single rect. */
 export function spriteSvg(sprite: Sprite, className = ''): string {
   const height = sprite.grid.length;

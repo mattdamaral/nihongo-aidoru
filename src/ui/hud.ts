@@ -1,8 +1,10 @@
 import { passiveRate, rewardMods } from '../game/economy';
+import { currentDayStreak, goalDoneToday, rollDay } from '../game/progress';
 import type { GameState } from '../game/state';
 import { IS_DEV_BUILD } from '../game/storage';
 import { formatRate, formatReward, formatSushi, streakBonus } from '../game/scoring';
 import { FLAME, NIGIRI, spriteSvg } from './sprites';
+import { ringStyle } from './stats';
 
 export interface Hud {
   update(state: GameState): void;
@@ -15,6 +17,8 @@ export interface Hud {
 export interface HudActions {
   onLessons(): void;
   onShop(): void;
+  onStats(): void;
+  onStamps(): void;
   onWhatsNew(): void;
   onMenu(): void;
 }
@@ -41,9 +45,15 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
       <span class="streak-value">0</span>
       <span class="streak-bonus">×1.0</span>
     </div>
+    <button type="button" class="daily" title="Daily goal and day streak (T for stats)">
+      <span class="goal-ring"><span class="daily-count">0</span></span>
+      <span class="daily-days"></span>
+    </button>
     <nav class="topbar-actions">
       <button type="button" class="btn btn-icon lessons-btn" title="Lessons (L)">Lessons</button>
       <button type="button" class="btn btn-icon shop-btn" title="Shop (B)" aria-label="Shop">Shop</button>
+      <button type="button" class="btn btn-icon stats-btn" title="Stats (T)">Stats</button>
+      <button type="button" class="btn btn-icon stamps-btn" title="Stamps (H)">Stamps</button>
       <button type="button" class="btn btn-icon new-btn" title="What’s new" aria-label="What’s new">New</button>
       <button type="button" class="btn btn-icon menu-btn" title="Menu: sound, save / load" aria-label="Menu">≡</button>
     </nav>
@@ -65,6 +75,12 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
   const popups = stage.querySelector<HTMLElement>('.popups')!;
   topbar.querySelector('.lessons-btn')!.addEventListener('click', actions.onLessons);
   topbar.querySelector('.shop-btn')!.addEventListener('click', actions.onShop);
+  topbar.querySelector('.stats-btn')!.addEventListener('click', actions.onStats);
+  topbar.querySelector('.daily')!.addEventListener('click', actions.onStats);
+  topbar.querySelector('.stamps-btn')!.addEventListener('click', actions.onStamps);
+  const dailyRing = topbar.querySelector<HTMLElement>('.daily .goal-ring')!;
+  const dailyCount = topbar.querySelector<HTMLElement>('.daily-count')!;
+  const dailyDays = topbar.querySelector<HTMLElement>('.daily-days')!;
   const newBtn = topbar.querySelector<HTMLElement>('.new-btn')!;
   newBtn.addEventListener('click', actions.onWhatsNew);
   topbar.querySelector('.menu-btn')!.addEventListener('click', actions.onMenu);
@@ -78,7 +94,16 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
       streakBonusEl.textContent = `×${streakBonus(state.streak, mods.streakStep, mods.streakCap).toFixed(1)}`;
       streakEl.title =
         `Streak: +${Math.round(mods.streakStep * 100)}% sushi for every 5 correct in a row ` +
-        `(max ×${Number(mods.streakCap.toFixed(2))})`;
+        `(max ×${Number(mods.streakCap.toFixed(2))}). A miss halves it.`;
+      const now = Date.now();
+      rollDay(state, now);
+      const { correct, goal } = state.daily;
+      const days = currentDayStreak(state, now);
+      dailyRing.setAttribute('style', ringStyle(correct / goal));
+      dailyRing.classList.toggle('is-done', goalDoneToday(state, now));
+      dailyCount.textContent = String(correct);
+      dailyDays.textContent = `${days}d`;
+      dailyDays.parentElement!.setAttribute('aria-label', `Daily goal: ${correct} of ${goal}. Day streak: ${days}.`);
       streakEl.classList.toggle('is-cold', state.streak === 0);
     },
     celebrate(reward) {

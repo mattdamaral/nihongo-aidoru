@@ -7,6 +7,7 @@ function sampleState() {
   state.sushi = 1234.56;
   state.streak = 7;
   state.enabledGroups = ['hiragana:a', 'katakana:ka'];
+  state.unlocked = ['hiragana', 'katakana'];
   state.stats['katakana:カ'] = { right: 5, wrong: 2, lastSeen: 42, lastWrong: false };
   state.tools = { shamoji: 4, yanagiba: 2 };
   state.toolProgress = { shamoji: 3.25 };

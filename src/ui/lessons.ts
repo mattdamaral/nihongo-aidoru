@@ -1,6 +1,7 @@
 import { ALL_CARDS, cardsInGroups, countRows, groupKey, type DeckId } from '../data/cards';
 import { deckFor } from '../data/decks';
 import { LESSONS } from '../data/lessons';
+import { isUnlocked, mastery, unlockProgress } from '../game/progress';
 import { rowBonus } from '../game/scoring';
 import { activeGroups, type GameState, type QuizMode } from '../game/state';
 
@@ -27,19 +28,11 @@ export interface LessonsActions {
   onLearn(deck: DeckId): void;
 }
 
-/** Correct answers needed per card to fill its share of the mastery bar. */
-export const MASTERY_TARGET = 5;
 const HINT = 'Pick a lesson to play, then its rows. More rows and harder lessons pay more sushi.';
 
 const hasKanji = (deck: DeckId) => ALL_CARDS.some((c) => c.deck === deck && c.kanji);
 /** True if `keys` turn on at least one real row of `deck`. */
 const hasRows = (keys: string[], deck: DeckId) => cardsInGroups(keys).some((c) => c.deck === deck);
-
-function mastery(state: GameState, key: string): number {
-  const cards = ALL_CARDS.filter((c) => groupKey(c.deck, c.group) === key);
-  const score = cards.reduce((sum, c) => sum + Math.min(state.stats[c.id]?.right ?? 0, MASTERY_TARGET), 0);
-  return score / (cards.length * MASTERY_TARGET);
-}
 
 const rowsOn = (state: GameState, deck: DeckId) =>
   state.enabledGroups.filter((k) => k.startsWith(`${deck}:`)).length;
@@ -125,6 +118,22 @@ export function createLessons(
             <span class="lesson-meta">Coming soon</span>
           </button>`;
       }
+      if (!isUnlocked(state, lesson.deck)) {
+        const p = unlockProgress(state, lesson.deck)!;
+        return `
+        <div class="lesson-locked">
+          <button type="button" class="lesson is-locked" data-locked="${lesson.deck}">
+            <span class="lesson-jp" lang="ja">${lesson.jpName}</span>
+            <span class="lesson-name">${lesson.name}</span>
+            <span class="lesson-meta">Locked</span>
+            <span class="lesson-lock">
+              <span class="lesson-lock-text">Master ${deckFor(p.from).name}: ${Math.min(p.have, p.need)} / ${p.need}</span>
+              <span class="chip-bar"><span style="width: ${Math.min(p.have / p.need, 1) * 100}%"></span></span>
+            </span>
+          </button>
+          <button type="button" class="btn btn-small learn-btn" data-learn="${lesson.deck}">Learn</button>
+        </div>`;
+      }
       const open = lesson.deck === state.activeDeck;
       return `
         <button type="button" class="lesson" data-lesson="${lesson.deck}" aria-expanded="${open}" aria-pressed="${open}">
@@ -155,6 +164,11 @@ export function createLessons(
       el.querySelector('.lesson-meta')!.textContent =
         `×${deckFor(deck).multiplier}${active ? ` · playing ${on} ${on === 1 ? 'row' : 'rows'}` : ''}`;
       el.classList.toggle('is-on', active);
+    }
+    for (const el of list.querySelectorAll<HTMLElement>('[data-locked]')) {
+      const p = unlockProgress(state, el.dataset.locked as DeckId)!;
+      el.querySelector('.lesson-lock-text')!.textContent = `Master ${deckFor(p.from).name}: ${Math.min(p.have, p.need)} / ${p.need}`;
+      el.querySelector<HTMLElement>('.chip-bar span')!.style.width = `${Math.min(p.have / p.need, 1) * 100}%`;
     }
     for (const el of list.querySelectorAll<HTMLElement>('.chip')) {
       const pct = Math.round(mastery(state, el.dataset.key!) * 100);
@@ -189,7 +203,12 @@ export function createLessons(
   list.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
     if (!btn) return;
-    if (btn.dataset.lesson) {
+    if (btn.dataset.locked) {
+      const p = unlockProgress(state, btn.dataset.locked as DeckId)!;
+      hintEl.textContent =
+        `${deckFor(btn.dataset.locked as DeckId).name} opens at ${p.need} mastery points in ${deckFor(p.from).name} ` +
+        `(you have ${Math.min(p.have, p.need)}). Each correct answer is a point, up to 5 per card. You can already study it in Learn.`;
+    } else if (btn.dataset.lesson) {
       play(btn.dataset.lesson as DeckId);
     } else if (btn.dataset.learn) {
       actions.onLearn(btn.dataset.learn as DeckId);
@@ -204,6 +223,7 @@ export function createLessons(
 
   /** Switches the quiz to `deck`, turning on its first row if none is picked yet. */
   function play(deck: DeckId, extraRow?: string): void {
+    if (!isUnlocked(state, deck)) return;
     const next = extraRow && !state.enabledGroups.includes(extraRow) ? [...state.enabledGroups, extraRow] : state.enabledGroups;
     if (deck === state.activeDeck && next === state.enabledGroups) return;
     state.activeDeck = deck;

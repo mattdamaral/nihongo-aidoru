@@ -36,6 +36,24 @@ export interface GameState {
   /** Epoch ms of the last economy tick; the gap to "now" is time away. */
   lastTick: number;
   lastSaved: number;
+  /** Lessons opened by mastering the one before (the first lesson is always open). */
+  unlocked: DeckId[];
+  /** Stamp id → epoch ms it was earned. */
+  stamps: Record<string, number>;
+  /** Today's correct answers toward the daily goal. */
+  daily: { day: string; correct: number; goal: number };
+  /** Days in a row the daily goal was hit. */
+  dayStreak: { count: number; best: number; lastDay: string; goalsHit: number };
+  /** Seconds spent with the game open and visible. */
+  playSeconds: number;
+}
+
+export const DAILY_GOALS = [20, 50, 100] as const;
+
+/** Local calendar day as "YYYY-MM-DD". */
+export function localDay(now: number): string {
+  const d = new Date(now);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /** Rows of the lesson being played; other lessons keep their picks for when you switch back. */
@@ -61,6 +79,11 @@ export function defaultState(now = Date.now()): GameState {
     toolProgress: {},
     lastTick: now,
     lastSaved: now,
+    unlocked: ['hiragana'],
+    stamps: {},
+    daily: { day: localDay(now), correct: 0, goal: 50 },
+    dayStreak: { count: 0, best: 0, lastDay: '', goalsHit: 0 },
+    playSeconds: 0,
   };
 }
 
@@ -98,14 +121,25 @@ export function parseState(raw: unknown): GameState | null {
   const picked = Array.isArray(r.enabledGroups) ? r.enabledGroups.filter((g): g is string => typeof g === 'string') : [];
   const groups = picked.length > 0 ? picked : fresh.enabledGroups;
   // Saves from before one-lesson-at-a-time play the lesson of their first row.
-  const activeDeck = DECK_IDS.includes(r.activeDeck as DeckId)
+  const savedDeck = DECK_IDS.includes(r.activeDeck as DeckId)
     ? (r.activeDeck as DeckId)
     : (DECK_IDS.find((d) => groups[0]?.startsWith(`${d}:`)) ?? fresh.activeDeck);
+  // Lessons someone already played stay open, so saves from before gating keep their lessons.
+  const unlocked = new Set<DeckId>(fresh.unlocked);
+  if (Array.isArray(r.unlocked)) {
+    for (const d of r.unlocked) if (DECK_IDS.includes(d as DeckId)) unlocked.add(d as DeckId);
+  } else {
+    unlocked.add(savedDeck);
+  }
+  for (const c of ALL_CARDS) if (stats[c.id]) unlocked.add(c.deck);
+  const activeDeck = unlocked.has(savedDeck) ? savedDeck : fresh.activeDeck;
   // The lesson being played needs at least one real row, or there's nothing to ask.
   const enabledGroups = cardsInGroups(groups).some((c) => c.deck === activeDeck)
     ? groups
     : [...groups, groupKey(activeDeck, ALL_CARDS.find((c) => c.deck === activeDeck)!.group)];
   const lastSaved = isNum(r.lastSaved) ? r.lastSaved : fresh.lastSaved;
+  const daily = record(r.daily);
+  const days = record(r.dayStreak);
 
   return {
     version: 2,
@@ -124,8 +158,34 @@ export function parseState(raw: unknown): GameState | null {
     toolProgress: toolRecord(r.toolProgress, false),
     lastTick: isNum(r.lastTick) ? r.lastTick : lastSaved,
     lastSaved,
+    // Keeps the order lessons appear in, whatever order they were unlocked.
+    unlocked: DECK_IDS.filter((d) => unlocked.has(d)),
+    stamps: numberRecord(r.stamps),
+    daily: {
+      day: typeof daily.day === 'string' ? daily.day : fresh.daily.day,
+      correct: isNum(daily.correct) && daily.correct >= 0 ? Math.floor(daily.correct) : 0,
+      goal: DAILY_GOALS.includes(daily.goal as (typeof DAILY_GOALS)[number]) ? (daily.goal as number) : fresh.daily.goal,
+    },
+    dayStreak: {
+      count: count(days.count),
+      best: Math.max(count(days.best), count(days.count)),
+      lastDay: typeof days.lastDay === 'string' ? days.lastDay : '',
+      goalsHit: count(days.goalsHit),
+    },
+    playSeconds: isNum(r.playSeconds) && r.playSeconds >= 0 ? r.playSeconds : 0,
   };
 }
+
+/** Keeps entries whose values are finite numbers. */
+function numberRecord(raw: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (typeof raw !== 'object' || raw === null) return out;
+  for (const [k, v] of Object.entries(raw)) if (isNum(v)) out[k] = v;
+  return out;
+}
+
+const record = (raw: unknown): Record<string, unknown> => (typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {});
+const count = (v: unknown) => (isNum(v) && v >= 0 ? Math.floor(v) : 0);
 
 /** Returns a valid state, falling back to defaults for anything missing or corrupt. */
 export function load(storage: SaveStorage): GameState {

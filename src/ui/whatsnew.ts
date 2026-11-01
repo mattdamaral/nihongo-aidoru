@@ -1,5 +1,6 @@
 import { UPDATES } from '../data/changelog';
 import { STORAGE_PREFIX } from '../game/storage';
+import { IDEAS_URL } from './menu';
 
 const SEEN_KEY = `${STORAGE_PREFIX}:seen-update`;
 
@@ -33,6 +34,7 @@ export function createWhatsNew(root: HTMLElement, firstVisit: boolean): WhatsNew
             <ul>${u.items.map((item) => `<li>${item}</li>`).join('')}</ul>
           </section>`,
         ).join('')}
+        <p class="whatsnew-more"><a class="btn" href="${IDEAS_URL}">See what’s planned →</a></p>
       </div>
     </div>
   `;

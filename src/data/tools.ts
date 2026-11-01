@@ -1,4 +1,4 @@
-import { HANGIRI, MAKISU, SHAMOJI, UCHIWA, YANAGIBA, type Sprite } from '../ui/sprites';
+import { CHOCHIN, DEBA, HANGIRI, ITAMAE, KAITEN, MAKISU, NOREN, SHAMOJI, UCHIWA, YANAGIBA, type Sprite } from '../ui/sprites';
 
 export type ToolEffect =
   /** Each owned tool makes `amount` sushi every `interval` seconds. */
@@ -74,6 +74,56 @@ export const TOOLS: Tool[] = [
     baseCost: 1300,
     growth: 1.18,
     effect: { kind: 'passive', amount: 40, interval: 30 },
+  },
+  {
+    id: 'deba',
+    name: 'Deba',
+    kana: 'でば',
+    english: 'fish knife',
+    sprite: DEBA,
+    baseCost: 5000,
+    growth: 1.3,
+    effect: { kind: 'answer', amount: 5 },
+  },
+  {
+    id: 'noren',
+    name: 'Noren',
+    kana: 'のれん',
+    english: 'shop curtain',
+    sprite: NOREN,
+    baseCost: 20_000,
+    growth: 1.18,
+    effect: { kind: 'passive', amount: 50, interval: 5 },
+  },
+  {
+    id: 'chochin',
+    name: 'Chōchin',
+    kana: 'ちょうちん',
+    english: 'paper lantern',
+    sprite: CHOCHIN,
+    baseCost: 200_000,
+    growth: 1.18,
+    effect: { kind: 'passive', amount: 250, interval: 5 },
+  },
+  {
+    id: 'kaiten',
+    name: 'Kaiten',
+    kana: 'かいてんずし',
+    english: 'sushi conveyor',
+    sprite: KAITEN,
+    baseCost: 3_000_000,
+    growth: 1.18,
+    effect: { kind: 'passive', amount: 3000, interval: 10 },
+  },
+  {
+    id: 'itamae',
+    name: 'Itamae',
+    kana: 'いたまえ',
+    english: 'sushi chef',
+    sprite: ITAMAE,
+    baseCost: 40_000_000,
+    growth: 1.18,
+    effect: { kind: 'passive', amount: 16_000, interval: 10 },
   },
 ];
 

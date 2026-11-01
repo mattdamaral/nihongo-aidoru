@@ -10,6 +10,23 @@ export interface Update {
 /** Player-facing update notes, newest first. Add a new entry at the top for each release. */
 export const UPDATES: Update[] = [
   {
+    id: '2026-11-01-stamps',
+    date: '2026-11-01',
+    title: 'Stamps, daily goals & more',
+    items: [
+      'Hanko stamps: earn stamps for answers, streaks, sushi, mastered rows, tools and daily goals. Each one gives a lasting bonus, and most kinds never run out.',
+      'Daily goal (20, 50 or 100 correct answers) with a day streak and a sushi gift, shown in the top bar.',
+      'New Stats screen: today’s goal, totals, progress in each lesson and the cards you miss most.',
+      'Lessons now open one by one: master enough of a lesson to unlock the next. Lessons you already played stay open.',
+      'New kana and words are introduced before you’re quizzed on them, a few at a time.',
+      'Wrong choices get trickier as you improve: look-alikes like ね / れ / わ show up once you know a card.',
+      'A miss now halves your streak instead of resetting it.',
+      'Five new kitchen tools, from a deba knife to your own itamae chef.',
+      'How to play guide, and a keyboard shortcuts list (press ?).',
+      'An Ideas page with what might come next (Menu → Ideas & plans).',
+    ],
+  },
+  {
     id: '2026-10-31-numbers-greetings',
     date: '2026-10-31',
     title: 'Numbers & greetings',

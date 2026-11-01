@@ -3,7 +3,7 @@ import { deckFor } from '../data/decks';
 import { ALL_KANA, isScript } from '../data/kana';
 import { mnemonicFor } from '../data/mnemonics';
 import type { GameState } from '../game/state';
-import { MASTERY_TARGET } from './lessons';
+import { isUnlocked, MASTERY_TARGET, unlockProgress } from '../game/progress';
 import { sizeClass } from './quiz';
 
 export interface StudyView {
@@ -138,17 +138,23 @@ export function createStudy(root: HTMLElement, state: GameState, onPractice: (ke
   function done(row: string): string {
     const key = groupKey(deckId, row);
     const on = state.enabledGroups.includes(key);
+    const from = isUnlocked(state, deckId) ? null : unlockProgress(state, deckId)?.from;
     // Whole rows of numbers or phrases are too long to list; show the row's name instead.
     const summary = isScript(deckId) ? rowCards(row).map((c) => c.kana).join(' ') : label(row);
+    const message = from
+      ? `This lesson opens once you master more ${deckFor(from).name}. Keep going!`
+      : on
+        ? 'This row is already in your practice. Go earn some sushi!'
+        : 'Ready to practice these in the quiz?';
     return `
       <div class="study-card study-done">
         <p class="study-where">Row complete</p>
         <div class="study-done-kana" lang="${isScript(deckId) ? 'ja' : 'en'}">${summary}</div>
-        <p>${on ? 'This row is already in your practice. Go earn some sushi!' : 'Ready to practice these in the quiz?'}</p>
+        <p>${message}</p>
       </div>
       <div class="study-nav">
         <button type="button" class="btn" data-nav="chart">Back to chart</button>
-        ${on ? '' : `<button type="button" class="btn btn-go" data-practice="${key}">Practice this row</button>`}
+        ${on || from ? '' : `<button type="button" class="btn btn-go" data-practice="${key}">Practice this row</button>`}
       </div>`;
   }
 

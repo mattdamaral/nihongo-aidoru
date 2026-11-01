@@ -1,6 +1,7 @@
 import { exportCode, importCode, SaveCodeError } from '../game/savecode';
 import type { GameState } from '../game/state';
 import { formatSushi } from '../game/scoring';
+import { IS_DEV_BUILD } from '../game/storage';
 import type { Sound } from './sound';
 
 export interface MenuView {
@@ -9,19 +10,36 @@ export interface MenuView {
   readonly isOpen: boolean;
 }
 
-/** Menu modal: sound settings, a copyable save code, and loading pasted codes. */
-export function createMenu(
-  root: HTMLElement,
-  state: GameState,
-  sound: Sound,
-  onLoad: (incoming: GameState) => void,
-): MenuView {
+export type DevAction = 'unlock' | 'sushi' | 'reset';
+
+export interface MenuActions {
+  onLoad(incoming: GameState): void;
+  onGuide(): void;
+  onKeys(): void;
+  /** Dev build only: testing shortcuts. */
+  onDev(action: DevAction): void;
+}
+
+/** The ideas page sits next to the game, at the same base path (so the dev site links to its own copy). */
+export const IDEAS_URL = `${import.meta.env.BASE_URL}ideas/`;
+
+/** Menu modal: help, sound settings, a copyable save code, and loading pasted codes. */
+export function createMenu(root: HTMLElement, state: GameState, sound: Sound, actions: MenuActions): MenuView {
+  const { onLoad } = actions;
   root.innerHTML = `
     <div class="sheet menu" role="dialog" aria-modal="true" aria-labelledby="menu-title">
       <header class="sheet-head">
         <h2 id="menu-title">Menu</h2>
         <button type="button" class="btn sheet-done">Done</button>
       </header>
+      <section class="menu-section">
+        <h3>Help</h3>
+        <div class="menu-row menu-links">
+          <button type="button" class="btn guide-btn">How to play</button>
+          <button type="button" class="btn keys-btn">Keyboard shortcuts <kbd>?</kbd></button>
+          <a class="btn" href="${IDEAS_URL}">Ideas &amp; plans →</a>
+        </div>
+      </section>
       <section class="menu-section">
         <h3>Sound</h3>
         <div class="menu-row sound-row">
@@ -54,6 +72,19 @@ export function createMenu(
           </div>
         </div>
       </section>
+      ${
+        IS_DEV_BUILD
+          ? `<section class="menu-section dev-tools">
+        <h3>Dev tools</h3>
+        <p class="sheet-hint">Only on the dev site, for testing. They change the dev save only.</p>
+        <div class="menu-row menu-links">
+          <button type="button" class="btn" data-dev="unlock">Unlock all lessons</button>
+          <button type="button" class="btn" data-dev="sushi">+10K sushi</button>
+          <button type="button" class="btn btn-danger" data-dev="reset">Reset dev save</button>
+        </div>
+      </section>`
+          : ''
+      }
     </div>
   `;
 
@@ -139,6 +170,18 @@ export function createMenu(
     root.classList.remove('is-open');
   };
   $('.sheet-done').addEventListener('click', close);
+  $('.guide-btn').addEventListener('click', () => {
+    close();
+    actions.onGuide();
+  });
+  $('.keys-btn').addEventListener('click', () => {
+    close();
+    actions.onKeys();
+  });
+  root.addEventListener('click', (e) => {
+    const action = (e.target as HTMLElement).closest<HTMLElement>('[data-dev]')?.dataset.dev as DevAction | undefined;
+    if (action) actions.onDev(action);
+  });
   root.addEventListener('click', (e) => {
     if (e.target === root) close();
   });

@@ -1,13 +1,13 @@
 import { countRows } from '../data/cards';
 import { TOOLS, type Tool } from '../data/tools';
 import { BASE_STREAK_CAP, BASE_STREAK_STEP, rowBonus, type RewardMods } from './scoring';
+import { stampBonuses } from './stamps';
 import { activeGroups, type GameState } from './state';
 
 /** Owning this many of a passive tool doubles its output (each milestone stacks). */
 export const MILESTONES = [25, 50, 100];
 /** Gaps between ticks longer than this count as time away (closed, hidden, asleep). */
 export const AWAY_THRESHOLD_S = 5;
-export const AWAY_EFFICIENCY = 0.5;
 export const AWAY_CAP_S = 24 * 60 * 60;
 
 export interface Payout {
@@ -20,6 +20,8 @@ export interface AwayReport {
   /** Seconds that actually earned (capped). */
   countedSeconds: number;
   gained: number;
+  /** Share of the normal speed that was paid. */
+  efficiency: number;
 }
 
 export const owned = (state: GameState, tool: Tool) => state.tools[tool.id] ?? 0;
@@ -28,7 +30,9 @@ export function toolCost(tool: Tool, count: number): number {
   return Math.ceil(tool.baseCost * tool.growth ** count);
 }
 
-export const nextCost = (state: GameState, tool: Tool) => toolCost(tool, owned(state, tool));
+/** Price of the next `tool`, after the day-streak stamps' discount. */
+export const nextCost = (state: GameState, tool: Tool) =>
+  Math.ceil(toolCost(tool, owned(state, tool)) * (1 - stampBonuses(state).discount));
 
 export function milestoneMult(count: number): number {
   return 2 ** MILESTONES.filter((m) => count >= m).length;
@@ -38,27 +42,36 @@ export function nextMilestone(count: number): number | null {
   return MILESTONES.find((m) => count < m) ?? null;
 }
 
-/** Sushi a passive tool type pays per cycle with `count` owned. */
+/** Sushi a passive tool type pays per cycle with `count` owned, before stamp bonuses. */
 export function payout(tool: Tool, count: number): number {
   return tool.effect.kind === 'passive' ? tool.effect.amount * count * milestoneMult(count) : 0;
+}
+
+/** What `tool` actually pays per cycle, with stamp bonuses. */
+export function toolOutput(state: GameState, tool: Tool): number {
+  const b = stampBonuses(state);
+  return payout(tool, owned(state, tool)) * b.idle * (b.tool[tool.id] ?? 1);
 }
 
 /** Total idle sushi per second. */
 export function passiveRate(state: GameState): number {
   let rate = 0;
   for (const tool of TOOLS) {
-    if (tool.effect.kind === 'passive') rate += payout(tool, owned(state, tool)) / tool.effect.interval;
+    if (tool.effect.kind === 'passive') rate += toolOutput(state, tool) / tool.effect.interval;
   }
   return rate;
 }
 
-/** Answer and streak modifiers from owned tools and selected rows, for `rewardFor`. */
+/** Answer and streak modifiers from owned tools, selected rows and stamps, for `rewardFor`. */
 export function rewardMods(state: GameState): RewardMods {
+  const stamps = stampBonuses(state);
   const mods = {
     answerBonus: 0,
     streakStep: BASE_STREAK_STEP,
-    streakCap: BASE_STREAK_CAP,
+    streakCap: BASE_STREAK_CAP + stamps.streakCap,
     rowMult: rowBonus(countRows(activeGroups(state))),
+    stampMult: stamps.answer,
+    deckStampMult: stamps.deck,
   };
   for (const tool of TOOLS) {
     const n = owned(state, tool);
@@ -80,7 +93,7 @@ export function buy(state: GameState, tool: Tool): boolean {
   return true;
 }
 
-function earn(state: GameState, amount: number): void {
+export function earn(state: GameState, amount: number): void {
   state.sushi += amount;
   state.totalEarned += amount;
 }
@@ -95,7 +108,7 @@ export function advance(state: GameState, seconds: number): Payout[] {
     const cycles = Math.floor(progress / tool.effect.interval);
     state.toolProgress[tool.id] = progress - cycles * tool.effect.interval;
     if (cycles > 0) {
-      const amount = cycles * payout(tool, n);
+      const amount = cycles * toolOutput(state, tool);
       earn(state, amount);
       payouts.push({ toolId: tool.id, amount });
     }
@@ -114,7 +127,8 @@ export function catchUp(state: GameState, now: number): { payouts: Payout[]; awa
   if (seconds <= AWAY_THRESHOLD_S) return { payouts: advance(state, seconds), away: null };
 
   const countedSeconds = Math.min(seconds, AWAY_CAP_S);
-  const gained = passiveRate(state) * countedSeconds * AWAY_EFFICIENCY;
+  const efficiency = stampBonuses(state).away;
+  const gained = passiveRate(state) * countedSeconds * efficiency;
   earn(state, gained);
-  return { payouts: [], away: { seconds, countedSeconds, gained } };
+  return { payouts: [], away: { seconds, countedSeconds, gained, efficiency } };
 }

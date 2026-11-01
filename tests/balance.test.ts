@@ -45,7 +45,8 @@ function simulate(minutes: number) {
     advance(state, 1);
     if (t % ANSWER_EVERY_S === 0) {
       answers++;
-      if (answers % WRONG_EVERY === 0) state.streak = 0;
+      // A miss halves the streak, as in the game.
+      if (answers % WRONG_EVERY === 0) state.streak = Math.floor(state.streak / 2);
       else {
         state.streak++;
         const r = rewardFor(KANA, state.streak, rewardMods(state));
@@ -73,13 +74,13 @@ function simulate(minutes: number) {
 }
 
 describe('shop balance', () => {
-  const { firstBuy, timeline } = simulate(60);
+  const { firstBuy, timeline } = simulate(12 * 60);
 
   if ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.npm_lifecycle_event === 'balance') {
     console.log('First purchase (minute):', Object.fromEntries(Object.entries(firstBuy).map(([k, v]) => [k, v.toFixed(1)])));
     console.table(
       timeline
-        .filter((s) => s.minute <= 10 || s.minute % 5 === 0)
+        .filter((s) => (s.minute <= 10 ? true : s.minute <= 60 ? s.minute % 5 === 0 : s.minute % 60 === 0))
         .map((s) => ({ ...s, passive: s.passive.toFixed(2), active: s.active.toFixed(2) })),
     );
   }
@@ -90,8 +91,17 @@ describe('shop balance', () => {
     expect(Math.min(...Object.values(firstBuy))).toBeLessThanOrEqual(1.5);
   });
 
-  it('unlocks every tool within 45 minutes', () => {
-    for (const tool of TOOLS) expect(firstBuy[tool.id], tool.id).toBeLessThanOrEqual(45);
+  it('unlocks the first five tools within 45 minutes', () => {
+    for (const tool of TOOLS.slice(0, 5)) expect(firstBuy[tool.id], tool.id).toBeLessThanOrEqual(45);
+  });
+
+  it('spreads the later tools over hours of play, keeping the chef as a long-term goal', () => {
+    expect(firstBuy.noren).toBeLessThanOrEqual(90);
+    expect(firstBuy.deba).toBeLessThanOrEqual(120);
+    expect(firstBuy.chochin).toBeLessThanOrEqual(4 * 60);
+    expect(firstBuy.kaiten).toBeLessThanOrEqual(8 * 60);
+    // Active play alone doesn't reach the last tool on day one; idle time and stamps get there.
+    expect(firstBuy.itamae).toBeUndefined();
   });
 
   it('keeps idle income in proportion to answering at 30 minutes', () => {

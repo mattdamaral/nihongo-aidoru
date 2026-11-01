@@ -1,5 +1,5 @@
 import { deckFor } from '../data/decks';
-import type { Card } from '../data/cards';
+import type { Card, DeckId } from '../data/cards';
 
 const BASE_REWARD = 1;
 const STREAK_STEP = 5;
@@ -17,6 +17,10 @@ export interface RewardMods {
   streakCap: number;
   /** Multiplier for practicing many rows at once (see rowBonus). */
   rowMult: number;
+  /** Answer multiplier from stamps. */
+  stampMult?: number;
+  /** Per-lesson multiplier from row and lesson stamps. */
+  deckStampMult?: Partial<Record<DeckId, number>>;
 }
 
 export const NO_MODS: RewardMods = {
@@ -36,13 +40,17 @@ export function rowBonus(rows: number): number {
   return 1 + ROW_BONUS * Math.max(rows - 1, 0);
 }
 
+/** Everything stamps add to an answer for `card`. */
+const stampsFor = (card: Card, mods: RewardMods) => (mods.stampMult ?? 1) * (mods.deckStampMult?.[card.deck] ?? 1);
+
 /** Sushi earned for answering `card` correctly with `streak` already including this answer. */
 export function rewardFor(card: Card, streak: number, mods: RewardMods = NO_MODS): number {
   return (
     (BASE_REWARD + mods.answerBonus) *
     deckFor(card.deck).multiplier *
     mods.rowMult *
-    streakBonus(streak, mods.streakStep, mods.streakCap)
+    streakBonus(streak, mods.streakStep, mods.streakCap) *
+    stampsFor(card, mods)
   );
 }
 
@@ -50,11 +58,13 @@ export function rewardFor(card: Card, streak: number, mods: RewardMods = NO_MODS
 export function rewardBreakdown(card: Card, streak: number, mods: RewardMods = NO_MODS): string {
   const n = (v: number) => String(Number(v.toFixed(2)));
   const deck = deckFor(card.deck);
+  const stamps = stampsFor(card, mods);
   return [
     `${n(BASE_REWARD + mods.answerBonus)} base`,
     `${n(deck.multiplier)} ${deck.name.toLowerCase()}`,
     `${n(mods.rowMult)} rows`,
     `${n(streakBonus(streak, mods.streakStep, mods.streakCap))} streak`,
+    ...(stamps === 1 ? [] : [`${n(stamps)} stamps`]),
   ].join(' × ');
 }
 

@@ -1,5 +1,5 @@
 import { TOOLS, type Tool } from '../data/tools';
-import { nextCost, nextMilestone, owned, passiveRate, payout, rewardMods, type Payout } from '../game/economy';
+import { nextCost, nextMilestone, owned, passiveRate, rewardMods, toolOutput, type Payout } from '../game/economy';
 import type { GameState } from '../game/state';
 import { formatRate, formatReward, formatSushi } from '../game/scoring';
 import { replay } from './hud';
@@ -35,11 +35,28 @@ function totalText(tool: Tool, state: GameState): string {
   if (e.kind === 'passive') {
     const next = nextMilestone(n);
     const milestone = next ? ` · ×2 at ${next}` : '';
-    return `Making +${formatSushi(payout(tool, n))} every ${e.interval}s${milestone}`;
+    return `Making +${formatSushi(toolOutput(state, tool))} every ${e.interval}s${milestone}`;
   }
   const mods = rewardMods(state);
   if (e.kind === 'answer') return `Answers: ${formatReward(1 + mods.answerBonus)} base sushi`;
   return `Streak: +${Math.round(mods.streakStep * 100)}% per 5 · max ×${Number(mods.streakCap.toFixed(2))}`;
+}
+
+/** Tools stay a mystery until the player has made this share of their base price. */
+const REVEAL_AT = 0.25;
+
+/** Owned or nearly affordable tools are shown; the first one after them is a "???" teaser. */
+function visibility(state: GameState): Map<string, 'shown' | 'mystery' | 'hidden'> {
+  const out = new Map<string, 'shown' | 'mystery' | 'hidden'>();
+  let teased = false;
+  for (const tool of TOOLS) {
+    if (owned(state, tool) > 0 || state.totalEarned >= tool.baseCost * REVEAL_AT) out.set(tool.id, 'shown');
+    else if (!teased) {
+      out.set(tool.id, 'mystery');
+      teased = true;
+    } else out.set(tool.id, 'hidden');
+  }
+  return out;
 }
 
 /** Right-hand shop: always visible on wide screens, a slide-in drawer on phones. */
@@ -58,6 +75,7 @@ export function createShop(root: HTMLElement, backdrop: HTMLElement, onBuy: (too
         <article class="tool" data-tool="${tool.id}">
           <div class="tool-icon">${spriteSvg(tool.sprite)}<span class="tool-owned">0</span></div>
           <div class="tool-info">
+            <p class="tool-mystery"><strong>???</strong> Keep cooking to find out what this is.</p>
             <h3><span lang="ja">${tool.kana}</span> <small>${tool.name} · ${tool.english}</small></h3>
             <p class="tool-effect">${effectText(tool)}</p>
             <p class="tool-total"></p>
@@ -108,8 +126,12 @@ export function createShop(root: HTMLElement, backdrop: HTMLElement, onBuy: (too
   return {
     update(state) {
       rateEl.textContent = `+${formatRate(passiveRate(state))} sushi/s`;
+      const seen = visibility(state);
       for (const tool of TOOLS) {
         const card = cards.get(tool.id)!;
+        const v = seen.get(tool.id)!;
+        card.el.hidden = v === 'hidden';
+        card.el.classList.toggle('is-mystery', v === 'mystery');
         const n = owned(state, tool);
         const cost = nextCost(state, tool);
         card.owned.textContent = String(n);

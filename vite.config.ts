@@ -9,6 +9,10 @@ export default defineConfig(({ mode }) => {
   const base = isDev ? '/nihongo-aidoru/dev/' : '/nihongo-aidoru/';
   return {
     base,
+    build: {
+      // Two pages: the game, and the ideas page at <base>ideas/.
+      rollupOptions: { input: { main: 'index.html', ideas: 'ideas/index.html' } },
+    },
     plugins: [
       VitePWA({
         registerType: 'autoUpdate',
