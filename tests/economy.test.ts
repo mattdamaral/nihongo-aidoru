@@ -5,7 +5,10 @@ import {
   advance,
   AWAY_CAP_S,
   buy,
+  buyMax,
   catchUp,
+  MAX_BULK,
+  maxBuy,
   milestoneMult,
   nextCost,
   passiveRate,
@@ -37,6 +40,23 @@ describe('tool prices', () => {
     expect(state.sushi).toBe(0);
     expect(state.tools.shamoji).toBe(1);
     expect(nextCost(state, shamoji)).toBe(toolCost(shamoji, 1));
+  });
+
+  it('buys as many as the sushi allows at once, at the same prices as one by one', () => {
+    const state = defaultState();
+    const three = toolCost(shamoji, 0) + toolCost(shamoji, 1) + toolCost(shamoji, 2);
+    state.sushi = three + toolCost(shamoji, 3) - 1;
+    expect(maxBuy(state, shamoji)).toEqual({ count: 3, cost: three });
+    expect(buyMax(state, shamoji)).toBe(3);
+    expect(state.tools.shamoji).toBe(3);
+    expect(state.sushi).toBe(toolCost(shamoji, 3) - 1);
+    expect(buyMax(state, shamoji)).toBe(0);
+  });
+
+  it('stops at the bulk limit', () => {
+    const state = defaultState();
+    state.sushi = Number.MAX_VALUE;
+    expect(maxBuy(state, shamoji).count).toBe(MAX_BULK);
   });
 });
 

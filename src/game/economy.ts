@@ -84,6 +84,31 @@ export function rewardMods(state: GameState): RewardMods {
   return mods;
 }
 
+/** Most tools bought in one go, so a huge pile of sushi can't stall the page. */
+export const MAX_BULK = 1000;
+
+/** How many of `tool` the current sushi buys at once, and what they cost together. */
+export function maxBuy(state: GameState, tool: Tool): { count: number; cost: number } {
+  const discount = 1 - stampBonuses(state).discount;
+  let count = 0;
+  let cost = 0;
+  for (let n = owned(state, tool); count < MAX_BULK; n++) {
+    const next = Math.ceil(toolCost(tool, n) * discount);
+    if (cost + next > state.sushi) break;
+    cost += next;
+    count++;
+  }
+  return { count, cost };
+}
+
+/** Buys as many of `tool` as the sushi allows; returns how many. */
+export function buyMax(state: GameState, tool: Tool): number {
+  const { count, cost } = maxBuy(state, tool);
+  state.sushi -= cost;
+  state.tools[tool.id] = owned(state, tool) + count;
+  return count;
+}
+
 /** Buys one of `tool` if affordable. */
 export function buy(state: GameState, tool: Tool): boolean {
   const cost = nextCost(state, tool);

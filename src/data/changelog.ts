@@ -22,6 +22,7 @@ export const UPDATES: Update[] = [
       'Wrong choices get trickier as you improve: look-alikes like ね / れ / わ show up once you know a card.',
       'A miss now halves your streak instead of resetting it.',
       'Five new kitchen tools, from a deba knife to your own itamae chef.',
+      'Buy max: buy as many of a tool as your sushi allows, in one click.',
       'How to play guide, and a keyboard shortcuts list (press ?).',
       'An Ideas page with what might come next (Menu → Ideas & plans).',
     ],

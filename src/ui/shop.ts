@@ -1,5 +1,5 @@
 import { TOOLS, type Tool } from '../data/tools';
-import { nextCost, nextMilestone, owned, passiveRate, rewardMods, toolOutput, type Payout } from '../game/economy';
+import { maxBuy, nextCost, nextMilestone, owned, passiveRate, rewardMods, toolOutput, type Payout } from '../game/economy';
 import type { GameState } from '../game/state';
 import { formatRate, formatReward, formatSushi } from '../game/scoring';
 import { replay } from './hud';
@@ -60,7 +60,7 @@ function visibility(state: GameState): Map<string, 'shown' | 'mystery' | 'hidden
 }
 
 /** Right-hand shop: always visible on wide screens, a slide-in drawer on phones. */
-export function createShop(root: HTMLElement, backdrop: HTMLElement, onBuy: (tool: Tool) => void): ShopView {
+export function createShop(root: HTMLElement, backdrop: HTMLElement, onBuy: (tool: Tool, max: boolean) => void): ShopView {
   root.innerHTML = `
     <header class="shop-head">
       <div>
@@ -81,9 +81,12 @@ export function createShop(root: HTMLElement, backdrop: HTMLElement, onBuy: (too
             <p class="tool-total"></p>
             ${tool.effect.kind === 'passive' ? '<div class="tool-bar"><span></span><i class="tool-pops"></i></div>' : ''}
           </div>
-          <button type="button" class="buy" data-buy="${tool.id}">
-            ${spriteSvg(NIGIRI, 'buy-icon')}<span class="buy-cost"></span>
-          </button>
+          <div class="buy-col">
+            <button type="button" class="buy" data-buy="${tool.id}">
+              ${spriteSvg(NIGIRI, 'buy-icon')}<span class="buy-cost"></span>
+            </button>
+            <button type="button" class="btn btn-small buy-max" data-buy="${tool.id}" data-max="true">Max</button>
+          </div>
         </article>`,
       ).join('')}
     </div>
@@ -103,6 +106,7 @@ export function createShop(root: HTMLElement, backdrop: HTMLElement, onBuy: (too
           pops: el.querySelector<HTMLElement>('.tool-pops'),
           buy: el.querySelector<HTMLButtonElement>('.buy')!,
           cost: el.querySelector<HTMLElement>('.buy-cost')!,
+          max: el.querySelector<HTMLButtonElement>('.buy-max')!,
         },
       ];
     }),
@@ -118,7 +122,7 @@ export function createShop(root: HTMLElement, backdrop: HTMLElement, onBuy: (too
   root.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-buy]');
     const tool = TOOLS.find((t) => t.id === btn?.dataset.buy);
-    if (tool) onBuy(tool);
+    if (tool) onBuy(tool, btn!.dataset.max === 'true');
   });
   root.querySelector('.shop-close')!.addEventListener('click', () => setOpen(false));
   backdrop.addEventListener('click', () => setOpen(false));
@@ -140,6 +144,10 @@ export function createShop(root: HTMLElement, backdrop: HTMLElement, onBuy: (too
         card.cost.textContent = formatSushi(cost);
         card.buy.disabled = state.sushi < cost;
         card.buy.title = `Buy for ${cost} sushi`;
+        const max = maxBuy(state, tool);
+        card.max.textContent = max.count > 1 ? `Max ×${max.count}` : 'Max';
+        card.max.disabled = max.count === 0;
+        card.max.title = max.count > 0 ? `Buy ${max.count} for ${formatSushi(max.cost)} sushi` : 'Not enough sushi yet';
         if (card.bar && tool.effect.kind === 'passive') {
           const pct = n === 0 ? 0 : ((state.toolProgress[tool.id] ?? 0) / tool.effect.interval) * 100;
           card.bar.style.width = `${Math.min(pct, 100)}%`;

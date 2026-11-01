@@ -26,7 +26,8 @@ export interface HudActions {
 /** Restarts a CSS animation class even if it is already applied. */
 export function replay(el: Element, cls: string): void {
   el.classList.remove(cls);
-  void (el as HTMLElement).offsetWidth;
+  // Reading layout forces a reflow so the animation restarts; getBoundingClientRect also works on SVGs.
+  el.getBoundingClientRect();
   el.classList.add(cls);
 }
 
@@ -60,7 +61,7 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
   `;
   stage.innerHTML = `
     <div class="sushi-wrap">
-      ${spriteSvg(NIGIRI, 'sushi')}
+      <div class="sushi-bob">${spriteSvg(NIGIRI, 'sushi')}</div>
       <div class="plate"></div>
       <div class="popups"></div>
     </div>

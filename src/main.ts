@@ -1,7 +1,7 @@
 import './style.css';
 import { cardsInGroups, DECK_IDS } from './data/cards';
 import { deckFor } from './data/decks';
-import { AWAY_CAP_S, AWAY_THRESHOLD_S, buy, catchUp, earn, passiveRate, rewardMods } from './game/economy';
+import { AWAY_CAP_S, AWAY_THRESHOLD_S, buy, buyMax, catchUp, earn, passiveRate, rewardMods } from './game/economy';
 import { checkDailyGoal, checkUnlocks, countCorrect } from './game/progress';
 import { nextQuestion, type Question } from './game/quiz';
 import { formatDuration, formatSushi, rewardBreakdown, rewardFor } from './game/scoring';
@@ -63,8 +63,9 @@ const hud = createHud($('.topbar'), $('.stage'), {
 const whatsNew = createWhatsNew($('.whatsnew-backdrop'), firstVisit);
 hud.setUnseen(whatsNew.hasUnseen);
 const quiz = createQuiz($('.quiz'), state, answer);
-const shop = createShop($('.shop'), $('.shop-backdrop'), (tool) => {
-  if (!buy(state, tool)) return;
+const shop = createShop($('.shop'), $('.shop-backdrop'), (tool, max) => {
+  const bought = max ? buyMax(state, tool) : Number(buy(state, tool));
+  if (!bought) return;
   sound.buy();
   shop.flashBought(tool.id);
   announce(progressNews());
