@@ -266,7 +266,8 @@ kbd {
   z-index: 1;
   width: 100%;
   height: 100%;
-  animation: bob 3s steps(8) infinite;
+  animation: bob 3s ease-in-out infinite;
+  will-change: transform;
 }
 
 .sushi {
@@ -293,7 +294,7 @@ kbd {
   border-radius: 50%;
   box-shadow: 0 6px 0 var(--shadow);
   /* Breathes with the sushi's bob, so it reads as the sushi lifting off the plate. */
-  animation: breathe 3s steps(8) infinite;
+  animation: breathe 3s ease-in-out infinite;
 }
 
 .popups {

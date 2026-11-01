@@ -29,6 +29,13 @@ export function replay(el: Element, cls: string): void {
   // Reading layout forces a reflow so the animation restarts; getBoundingClientRect also works on SVGs.
   el.getBoundingClientRect();
   el.classList.add(cls);
+  // Clear it once played, so a leftover class (e.g. a miss's wobble) can't mask the next animation.
+  const done = (e: Event) => {
+    if (e.target !== el) return;
+    el.classList.remove(cls);
+    el.removeEventListener('animationend', done);
+  };
+  el.addEventListener('animationend', done);
 }
 
 export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudActions): Hud {
@@ -109,6 +116,7 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
       streakEl.classList.toggle('is-cold', state.streak === 0);
     },
     celebrate(reward) {
+      sushi.classList.remove('wobble');
       replay(sushi, 'bounce');
       replay(value, 'pulse');
       replay(counterIcon, 'grow');
@@ -120,6 +128,7 @@ export function createHud(topbar: HTMLElement, stage: HTMLElement, actions: HudA
       pop.addEventListener('animationend', () => pop.remove());
     },
     wobble() {
+      sushi.classList.remove('bounce');
       replay(sushi, 'wobble');
     },
     setUnseen(on) {
